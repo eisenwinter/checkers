@@ -12,6 +12,10 @@ but still exploring possibilites.
 
 Due to the protection heuristic some AI vs AI games will result in some wall hugging.
 
+If you might wonder why each ai run yields different results despite no shuffelinig, 
+its because the go map is intentionally random when iterated with range,
+thus if there are many equal moves it will pick a random one and there is no need to shuffle.
+
 ## Building
 
 ```

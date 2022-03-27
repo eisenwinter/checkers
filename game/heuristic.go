@@ -245,14 +245,16 @@ func (b Board) getStuckPiecesCount() (white int, red int, wking int, rking int) 
 	for i, v := range b {
 		if !has(v, Empty) {
 			r, c := reverseIndexOf(i)
-			if !has(v, King) &&
+			if !has(v, King) && has(v, Player) &&
 				(!b.canDrawTo(r-1, c-1) || !has(b[IndexOf(r-1, c-1)], Empty)) &&
 				(!b.canDrawTo(r-1, c+1) || !has(b[IndexOf(r-1, c+1)], Empty)) {
-				if has(v, Player) {
-					white++
-				} else {
-					red++
-				}
+				white++
+
+			}
+			if !has(v, King) && !has(v, Player) &&
+				(!b.canDrawTo(r+1, c-1) || !has(b[IndexOf(r+1, c-1)], Empty)) &&
+				(!b.canDrawTo(r+1, c+1) || !has(b[IndexOf(r+1, c+1)], Empty)) {
+				red++
 
 			}
 			if !has(v, King) &&

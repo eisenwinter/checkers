@@ -137,7 +137,7 @@ func possibleMoves(player bool, board Board) map[Move]Board {
 	return m
 }
 
-//getPossibleValidMovesForPlayer utility method for the ai, shuffles move for more variation
+//getPossibleValidMovesForPlayer utility method for the ai
 func (b Board) getPossibleValidMovesForPlayer(player bool) []Move {
 	m := make([]Move, 0)
 	pieces := b.allPiecesFor(player)
