@@ -257,7 +257,7 @@ func (b Board) getStuckPiecesCount() (white int, red int, wking int, rking int) 
 				red++
 
 			}
-			if !has(v, King) &&
+			if has(v, King) &&
 				(!b.canDrawTo(r-1, c-1) || !has(b[IndexOf(r-1, c-1)], Empty)) &&
 				(!b.canDrawTo(r-1, c+1) || !has(b[IndexOf(r-1, c+1)], Empty)) &&
 				(!b.canDrawTo(r+1, c-1) || !has(b[IndexOf(r+1, c-1)], Empty)) &&
