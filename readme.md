@@ -1,7 +1,29 @@
 # Checkers
 
-simple checkers, playing arround with minimax heuristics
+ ![Checkers](/doc/animation.gif)
 
-can be launched in full ai vs ai mode with the -ai flag
+Simple checkers, playing arround with minimax heuristics.
 
-main goal here wasnt the gameitself but rather exploring minimax and heuristics
+It can be launched in full ai vs ai mode with the -ai flag.
+The main goal here wasnt the gameitself but rather exploring minimax and heuristics.
+
+I ended up using adapted heurstics from https://github.com/kevingregor/Checkers/blob/master/Final%20Project%20Report.pdf for now,
+but still exploring possibilites.
+
+Due to the protection heuristic some AI vs AI games will result in some wall hugging.
+
+## Building
+
+```
+go mod download
+go build main.go
+```
+
+
+## Used Packages
+
+https://github.com/faiface/pixel  - used to draw the Board
+
+## License
+
+BSD-2-Clause

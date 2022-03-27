@@ -13,8 +13,6 @@ func (b Board) evaluate() int {
 	//regular pieces weight 10, kings 15
 	base := (w * 10) - (r * 10) + (wk*15 - rk*15)
 
-	//adapted https://de.wikihow.com/Bei-Dame-gewinnen
-
 	//weight of each piece in the backrow
 	wbr, rbr := b.getBackRowCount()
 	base = base + (wbr*8 - rbr*8)
