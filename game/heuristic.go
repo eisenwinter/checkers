@@ -7,8 +7,7 @@ func (b Board) getBackRowCount() (white int, red int) {
 	//red backrow
 	for i := 0; i < width; i++ {
 		if !has(b[i], Empty) {
-			//only if backrow is not a king
-			if !has(b[i], Player) && !has(b[i], King) {
+			if !has(b[i], Player) {
 				red++
 			}
 		}
@@ -16,7 +15,7 @@ func (b Board) getBackRowCount() (white int, red int) {
 	//white backrow
 	for i := len(b) - width - 1; i < len(b); i++ {
 		if !has(b[i], Empty) {
-			if has(b[i], Player) && !has(b[i], King) {
+			if has(b[i], Player) {
 				white++
 			}
 		}

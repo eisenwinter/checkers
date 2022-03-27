@@ -4,7 +4,7 @@ import (
 	"math"
 )
 
-const MaxDepth = 12
+const MaxDepth = 13
 const AlphaStart = math.MaxInt
 const BetaStart = math.MinInt
 
@@ -32,7 +32,7 @@ func (b Board) evaluate() int {
 
 	//weight of a protected piece
 	wpr, rpr := b.getProtectionCount()
-	base = base + (wpr*6 - rpr*6)
+	base = base + (wpr*7 - rpr*7)
 
 	wst, rst, wstk, rstk := b.getStuckPiecesCount()
 	base = base + (wst * -2) - (rst * -2) + (wstk*-5 - rstk*-5)
