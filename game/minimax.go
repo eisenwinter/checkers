@@ -4,7 +4,7 @@ import (
 	"math"
 )
 
-const MaxDepth = 10
+const MaxDepth = 12
 const AlphaStart = math.MaxInt
 const BetaStart = math.MinInt
 
@@ -34,6 +34,10 @@ func (b Board) evaluate() int {
 	wpr, rpr := b.getProtectionCount()
 	base = base + (wpr*6 - rpr*6)
 
+	//further ideas from wikipedia:
+	// - trapped kings
+	// - runaway checkers (unimpeded path to be kinged)
+
 	return base
 }
 
@@ -56,35 +60,35 @@ func minimax(depth int, max bool, board Board, player bool, alpha int, beta int,
 		return board.evaluate(), m
 	}
 	if max {
-		maxSoFar := math.MinInt
-		var bestMove *Move
+		value := math.MinInt
+		var move *Move
 		for k, v := range possibleMoves(player, board) {
 			eval, _ := minimax(depth-1, false, v, player, alpha, beta, &k)
-			maxSoFar = maxOf(maxSoFar, eval)
-			if maxSoFar == eval {
-				bestMove = &k
+			value = maxOf(value, eval)
+			if value == eval {
+				move = &k
 			}
 			alpha = maxOf(alpha, eval)
 			if eval >= beta {
-				return maxSoFar, bestMove
+				return value, move
 			}
 		}
-		return maxSoFar, bestMove
+		return value, move
 	} else {
-		minSoFar := math.MaxInt
-		var worstMove *Move
+		value := math.MaxInt
+		var move *Move
 		for k, v := range possibleMoves(player, board) {
 			eval, _ := minimax(depth-1, true, v, !player, alpha, beta, &k)
-			minSoFar = minOf(minSoFar, eval)
-			if minSoFar == eval {
-				worstMove = &k
+			value = minOf(value, eval)
+			if value == eval {
+				move = &k
 			}
 			beta = minOf(beta, eval)
-			if eval <= beta {
-				return minSoFar, worstMove
+			if eval <= alpha {
+				return value, move
 			}
 		}
-		return minSoFar, worstMove
+		return value, move
 	}
 }
 

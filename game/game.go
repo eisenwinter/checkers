@@ -18,12 +18,14 @@ type Game struct {
 	redKings   int
 	whiteKings int
 	state      GameState
+	boardQueue []Board
 }
 
 //Start starts the game
 func (g *Game) Start() {
 	g.running = true
 	g.started = time.Now()
+	g.boardQueue = make([]Board, 0)
 }
 
 //IsRunning indicates if the game is still running
@@ -179,6 +181,7 @@ func (g *Game) unrollMove(m *Move) {
 		g.unrollMove(m.Previous)
 	}
 	g.MakeMove(*m)
+	g.boardQueue = append(g.boardQueue, g.board)
 }
 
 //MakeAIMove triggers a computer move
@@ -219,6 +222,16 @@ func (g *Game) MakeMove(m Move) bool {
 //Player indiciates wich players turn it is (True = White, False = Red)
 func (g *Game) Player() bool {
 	return g.player
+}
+
+func (g *Game) HasBoardInQueue() bool {
+	return len(g.boardQueue) > 0
+}
+
+func (g *Game) DequeueBoard() Board {
+	b := g.boardQueue[0]
+	g.boardQueue = g.boardQueue[1:]
+	return b
 }
 
 //makeMove applies the made move

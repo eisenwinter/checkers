@@ -17,6 +17,8 @@ import (
 
 var fullAIMode = false
 
+const aiMoveSeconds = 0.3
+
 func run() {
 	cfg := pixelgl.WindowConfig{
 		Title:  "Checkers",
@@ -34,51 +36,68 @@ func run() {
 	g := game.SetupGame()
 	g.Start()
 	moves := []game.Move{}
+	last := time.Now()
+	moving := 0.0
+	var currentBoard game.Board
 	for !win.Closed() {
+		dt := time.Since(last).Seconds()
+		if moving > 0 {
+			moving = moving - dt
+			if moving < 0 {
+				moving = 0
+			}
+		}
+		last = time.Now()
 		if g.GameState() == game.GameStateRunning {
-			if !g.Player() {
-				//ai
-				if fullAIMode {
-					time.Sleep(100 * time.Millisecond)
-				}
-				g.MakeAIMove()
-			} else {
-				if fullAIMode {
-					time.Sleep(100 * time.Millisecond)
+			if !g.HasBoardInQueue() {
+				if !g.Player() {
+					//ai
 					g.MakeAIMove()
 				} else {
-					if win.JustPressed(pixelgl.MouseButtonLeft) {
-						vec := win.MousePosition()
-						col := math.Floor(vec.X / 60)
-						row := math.Floor((win.Bounds().H() - vec.Y) / 60)
-						if row < 10 && col < 10 {
-							done := false
-							if len(moves) > 0 {
-								for _, v := range moves {
-									if v.ToCol == int(col) && v.ToRow == int(row) {
-										followUp := g.MakeMove(v)
-										if !followUp {
-											done = true
-											moves = []game.Move{}
+					if fullAIMode {
+						g.MakeAIMove()
+					} else {
+						if win.JustPressed(pixelgl.MouseButtonLeft) {
+							vec := win.MousePosition()
+							col := math.Floor(vec.X / 60)
+							row := math.Floor((win.Bounds().H() - vec.Y) / 60)
+							if row < 10 && col < 10 {
+								done := false
+								if len(moves) > 0 {
+									for _, v := range moves {
+										if v.ToCol == int(col) && v.ToRow == int(row) {
+											followUp := g.MakeMove(v)
+											if !followUp {
+												done = true
+												moves = []game.Move{}
+											}
 										}
 									}
 								}
-							}
-							if !done {
-								moves = g.GetPossibleMoves(int(row), int(col))
+								if !done {
+									moves = g.GetPossibleMoves(int(row), int(col))
+								}
 							}
 						}
 					}
 				}
-
 			}
 		}
 		grid.Clear()
 		mat := pixel.IM
 		mat = mat.Rotated(win.Bounds().Center(), -math.Pi/2)
 		grid.SetMatrix(mat)
-
-		DrawBoard(grid, g.CurrentBoard(), moves)
+		if moving > 0 {
+			DrawBoard(grid, currentBoard, moves)
+		} else {
+			if g.HasBoardInQueue() {
+				currentBoard = g.DequeueBoard()
+				DrawBoard(grid, currentBoard, moves)
+				moving = aiMoveSeconds
+			} else {
+				DrawBoard(grid, g.CurrentBoard(), moves)
+			}
+		}
 
 		grid.Draw(win)
 		win.Update()

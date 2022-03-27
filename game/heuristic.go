@@ -90,6 +90,8 @@ func (b Board) getProtectionCount() (white int, red int) {
 				//on edge
 				if c == 0 || c == (width-1) {
 					white++
+				} else if r == 0 || r == (height-1) {
+					white++
 				} else if b.canDrawTo(r-1, c-1) &&
 					!has(b[IndexOf(r-1, c-1)], Empty) &&
 					has(b[IndexOf(r-1, c-1)], Player) {
@@ -111,6 +113,8 @@ func (b Board) getProtectionCount() (white int, red int) {
 			} else {
 				//red
 				if c == 0 || c == (width-1) {
+					red++
+				} else if r == 0 || r == (height-1) {
 					red++
 				} else if b.canDrawTo(r-1, c-1) &&
 					!has(b[IndexOf(r-1, c-1)], Empty) &&
