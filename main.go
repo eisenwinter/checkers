@@ -36,6 +36,7 @@ func run() {
 	g := game.SetupGame()
 	g.Start()
 	moves := []game.Move{}
+	highlight := []game.Coordinate{}
 	last := time.Now()
 	moving := 0.0
 	var currentBoard game.Board
@@ -70,12 +71,13 @@ func run() {
 											if !followUp {
 												done = true
 												moves = []game.Move{}
+												highlight = []game.Coordinate{}
 											}
 										}
 									}
 								}
 								if !done {
-									moves = g.GetPossibleMoves(int(row), int(col))
+									moves, highlight = g.GetPossibleMoves(int(row), int(col))
 								}
 							}
 						}
@@ -88,14 +90,14 @@ func run() {
 		mat = mat.Rotated(win.Bounds().Center(), -math.Pi/2)
 		grid.SetMatrix(mat)
 		if moving > 0 {
-			DrawBoard(grid, currentBoard, moves)
+			DrawBoard(grid, currentBoard, moves, highlight)
 		} else {
 			if g.HasBoardInQueue() {
 				currentBoard = g.DequeueBoard()
-				DrawBoard(grid, currentBoard, moves)
+				DrawBoard(grid, currentBoard, moves, highlight)
 				moving = aiMoveSeconds
 			} else {
-				DrawBoard(grid, g.CurrentBoard(), moves)
+				DrawBoard(grid, g.CurrentBoard(), moves, highlight)
 			}
 		}
 
@@ -104,7 +106,7 @@ func run() {
 	}
 }
 
-func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move) {
+func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []game.Coordinate) {
 	cellSize := 60
 	for i := 0; i < 10; i++ {
 		for j := 0; j < 10; j++ {
@@ -158,6 +160,17 @@ func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move) {
 				pixel.V(float64(v.ToRow*cellSize+cellSize/2), float64(v.ToCol*cellSize+cellSize/2)),
 			)
 			imd.Circle(float64(cellSize/3), 0)
+		}
+	}
+
+	if len(hl) > 0 {
+		imd.Color = colornames.Lightsalmon
+		for _, v := range hl {
+			imd.Push(
+				pixel.V(float64(v.Row*cellSize+3), float64(v.Col*cellSize+3)),
+				pixel.V(float64(v.Row*cellSize+cellSize-3), float64(v.Col*cellSize+cellSize-3)),
+			)
+			imd.Rectangle(4)
 		}
 	}
 

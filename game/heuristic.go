@@ -81,7 +81,6 @@ func (b Board) getMiddleRowSideCount() (white int, red int) {
 func (b Board) getProtectionCount() (white int, red int) {
 	white = 0
 	red = 0
-
 	for i, v := range b {
 		if !has(v, Empty) {
 			r, c := reverseIndexOf(i)
@@ -235,4 +234,40 @@ func (b Board) getVulnerablePieceCount() (white int, red int, wking int, rking i
 		}
 	}
 	return
+}
+
+//getStuckPiecesCount gets the number of pieces in the backrow heustric
+func (b Board) getStuckPiecesCount() (white int, red int, wking int, rking int) {
+	white = 0
+	red = 0
+	wking = 0
+	rking = 0
+	for i, v := range b {
+		if !has(v, Empty) {
+			r, c := reverseIndexOf(i)
+			if !has(v, King) &&
+				(!b.canDrawTo(r-1, c-1) || !has(b[IndexOf(r-1, c-1)], Empty)) &&
+				(!b.canDrawTo(r-1, c+1) || !has(b[IndexOf(r-1, c+1)], Empty)) {
+				if has(v, Player) {
+					white++
+				} else {
+					red++
+				}
+
+			}
+			if !has(v, King) &&
+				(!b.canDrawTo(r-1, c-1) || !has(b[IndexOf(r-1, c-1)], Empty)) &&
+				(!b.canDrawTo(r-1, c+1) || !has(b[IndexOf(r-1, c+1)], Empty)) &&
+				(!b.canDrawTo(r+1, c-1) || !has(b[IndexOf(r+1, c-1)], Empty)) &&
+				(!b.canDrawTo(r+1, c+1) || !has(b[IndexOf(r+1, c+1)], Empty)) {
+				if has(v, Player) {
+					wking++
+				} else {
+					rking++
+				}
+			}
+
+		}
+	}
+	return white, red, wking, rking
 }

@@ -11,11 +11,11 @@ const BetaStart = math.MinInt
 func (b Board) evaluate() int {
 	w, r, wk, rk := b.getCounts()
 	//regular pieces weight 10, kings 15
-	base := (w * 10) - (r * 10) + (wk*15 - rk*15)
+	base := (w * 15) - (r * 15) + (wk*20 - rk*20)
 
 	//weight of each piece in the backrow
 	wbr, rbr := b.getBackRowCount()
-	base = base + (wbr*8 - rbr*8)
+	base = base + (wbr*12 - rbr*12)
 
 	//weight of each piece middle box position
 	wmb, rmb := b.getMiddleBoxCount()
@@ -34,8 +34,10 @@ func (b Board) evaluate() int {
 	wpr, rpr := b.getProtectionCount()
 	base = base + (wpr*6 - rpr*6)
 
+	wst, rst, wstk, rstk := b.getStuckPiecesCount()
+	base = base + (wst * -2) - (rst * -2) + (wstk*-5 - rstk*-5)
+
 	//further ideas from wikipedia:
-	// - trapped kings
 	// - runaway checkers (unimpeded path to be kinged)
 
 	return base
@@ -101,7 +103,10 @@ func unrollSkips(r, c int, player bool, board Board, prev *Move) map[Move]Board 
 		copy(tmp, board)
 		followUps := tmp.applyMove(p, player)
 		if followUps {
-			return unrollSkips(p.ToRow, p.ToCol, player, tmp, &p)
+			res := unrollSkips(p.ToRow, p.ToCol, player, tmp, &p)
+			for k, v := range res {
+				m[k] = v
+			}
 		} else {
 			m[p] = tmp
 		}

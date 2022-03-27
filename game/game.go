@@ -150,20 +150,18 @@ func (g *Game) checkForcedMoves() []Move {
 }
 
 //GetPossibleMoves returns the possible moves for that given field
-func (g *Game) GetPossibleMoves(r int, c int) []Move {
+func (g *Game) GetPossibleMoves(r int, c int) ([]Move, []Coordinate) {
 	//we have to first check if any forced moves are ahead (take checker IS A MUST)
 	forced := g.checkForcedMoves()
 	if len(forced) > 0 {
-		f := make([]Move, 0)
+		hl := make([]Coordinate, 0)
 		for _, v := range forced {
-			if v.FromCol == c && v.FromRow == r {
-				f = append(f, v)
-			}
+			hl = append(hl, Coordinate{v.FromRow, v.FromCol})
 		}
-		return f
+		return forced, hl
 
 	}
-	return filterMoves(g.board.getPossibleMoves(r, c, g.player))
+	return filterMoves(g.board.getPossibleMoves(r, c, g.player)), []Coordinate{{r, c}}
 }
 
 //Turn returns the current turn
