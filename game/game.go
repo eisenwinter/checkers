@@ -63,6 +63,10 @@ func (g *Game) CurrentBoard() Board {
 	return g.board
 }
 
+func (g *Game) CurrentEvaulation() int {
+	return g.board.evaluate()
+}
+
 //GameState is the state the game is currently in
 type GameState string
 
@@ -185,7 +189,7 @@ func (g *Game) unrollMove(m *Move) {
 //MakeAIMove triggers a computer move
 func (g *Game) MakeAIMove() {
 	if g.GameState() == GameStateRunning {
-		_, m := minimax(MaxDepth, true, g.board, g.player, AlphaStart, BetaStart, nil)
+		_, m := minimax(MaxDepth, g.board, g.player, AlphaStart, BetaStart, nil)
 		if m != nil {
 			g.unrollMove(m)
 		} else {
@@ -208,7 +212,8 @@ func (g *Game) MakeMove(m Move) bool {
 		}
 		g.turn++
 		g.player = !g.player
-		log.Printf("Current board eval: %d | Whites turn: %v", g.board.evaluate(), g.player)
+		log.Printf("Turn: %d | Current board eval: %d | Whites turn: %v", g.turn, g.board.evaluate(), g.player)
+		g.board.LogBoardHeurstics()
 	} else {
 		g.running = false
 		log.Printf("Final board eval: %d | Whites turn: %v", g.board.evaluate(), g.player)

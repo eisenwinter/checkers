@@ -10,12 +10,15 @@ import (
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/imdraw"
 	"github.com/faiface/pixel/pixelgl"
+	"github.com/faiface/pixel/text"
 	"golang.org/x/image/colornames"
+	"golang.org/x/image/font/basicfont"
 
 	"github.com/eisenwinter/checkers/game"
 )
 
 var fullAIMode = false
+var showEvalMode = false
 
 const aiMoveSeconds = 0.3
 
@@ -40,6 +43,10 @@ func run() {
 	last := time.Now()
 	moving := 0.0
 	var currentBoard game.Board
+
+	atlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+	overlayText := text.New(pixel.V(10, 580), atlas)
+	overlayText.Color = colornames.Magenta
 	for !win.Closed() {
 		dt := time.Since(last).Seconds()
 		if moving > 0 {
@@ -102,6 +109,11 @@ func run() {
 		}
 
 		grid.Draw(win)
+		if fullAIMode || showEvalMode {
+			overlayText.Clear()
+			fmt.Fprintf(overlayText, "%d", g.CurrentEvaulation())
+			overlayText.Draw(win, pixel.IM)
+		}
 		win.Update()
 	}
 }
@@ -180,8 +192,10 @@ func main() {
 	log.SetFlags(0)
 	log.SetOutput(new(logger))
 	aiMode := flag.Bool("ai", false, "full auto ai flag")
+	scoreMode := flag.Bool("s", false, "show score")
 	flag.Parse()
 	fullAIMode = *aiMode
+	showEvalMode = *scoreMode
 	log.Printf("AI only mode: %v", fullAIMode)
 	pixelgl.Run(run)
 }
