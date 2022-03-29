@@ -13,15 +13,15 @@ func (b Board) evaluate() int {
 	w, r, wk, rk := b.getCounts()
 	//regular pieces weight 10, kings 15
 	base := (w * 15) - (r * 15)
-	base = base + (wk*20 - rk*20)
+	base = base + (wk*25 - rk*25)
 
 	//weight of each piece in the backrow
 	wbr, rbr := b.getBackRowCount()
-	base = base + (wbr*12 - rbr*12)
+	base = base + (wbr*14 - rbr*14)
 
 	//weight of each piece middle box position
 	wmb, rmb := b.getMiddleBoxCount()
-	base = base + (wmb*5 - rmb*5)
+	base = base + (wmb*7 - rmb*7)
 
 	//weight of each piece in the middle two rows
 	wmr, rmr := b.getMiddleRowSideCount()
@@ -34,16 +34,16 @@ func (b Board) evaluate() int {
 
 	//weight of a protected piece
 	wpr, rpr := b.getProtectionCount()
-	base = base + (wpr*8 - rpr*8)
+	base = base + (wpr*5 - rpr*5)
 
 	wst, rst, wstk, rstk := b.getStuckPiecesCount()
 	base = base + (wst * -1) - (rst * -1) + (wstk*-2 - rstk*-2)
 
 	wfr, rfr := b.getFortressCount()
-	base = base + (wfr*7 - rfr*7)
+	base = base + (wfr*2 - rfr*2)
 
 	wds, rds := b.getDiamondShapes()
-	base = base + (wds*3 - rds*3)
+	base = base + (wds*7 - rds*7)
 
 	wrun, rrun := b.getRunAwayCount()
 	base = base + (wrun*3 - rrun*3)
