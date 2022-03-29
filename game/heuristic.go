@@ -281,27 +281,21 @@ func (b Board) getDiamondShapes() (white int, red int) {
 				//white
 				if isSafe(r-1, c-1, true) && isSafe(r+1, c-1, true) && isSafe(r, c-2, true) {
 					white++
-				}
-				if isSafe(r-1, c+1, true) && isSafe(r+1, c+1, true) && isSafe(r, c+2, true) {
+				} else if isSafe(r-1, c+1, true) && isSafe(r+1, c+1, true) && isSafe(r, c+2, true) {
 					white++
-				}
-				if isSafe(r-1, c-1, true) && isSafe(r-1, c+1, true) && isSafe(r-2, c, true) {
+				} else if isSafe(r-1, c-1, true) && isSafe(r-1, c+1, true) && isSafe(r-2, c, true) {
 					white++
-				}
-				if isSafe(r+1, c-1, true) && isSafe(r+1, c+1, true) && isSafe(r+2, c, true) {
+				} else if isSafe(r+1, c-1, true) && isSafe(r+1, c+1, true) && isSafe(r+2, c, true) {
 					white++
 				}
 			} else {
 				if isSafe(r-1, c-1, false) && isSafe(r+1, c-1, false) && isSafe(r, c-2, false) {
 					red++
-				}
-				if isSafe(r-1, c+1, false) && isSafe(r+1, c+1, false) && isSafe(r, c+2, false) {
+				} else if isSafe(r-1, c+1, false) && isSafe(r+1, c+1, false) && isSafe(r, c+2, false) {
 					red++
-				}
-				if isSafe(r-1, c-1, false) && isSafe(r-1, c+1, false) && isSafe(r-2, c, false) {
+				} else if isSafe(r-1, c-1, false) && isSafe(r-1, c+1, false) && isSafe(r-2, c, false) {
 					red++
-				}
-				if isSafe(r+1, c-1, false) && isSafe(r+1, c+1, false) && isSafe(r+2, c, false) {
+				} else if isSafe(r+1, c-1, false) && isSafe(r+1, c+1, false) && isSafe(r+2, c, false) {
 					red++
 				}
 
@@ -367,8 +361,7 @@ func (b Board) getStuckPiecesCount() (white int, red int, wking int, rking int) 
 				(!b.canDrawTo(r-1, c+1) || !has(b[IndexOf(r-1, c+1)], Empty)) {
 				white++
 
-			}
-			if !has(v, King) && !has(v, Player) &&
+			} else if !has(v, King) && !has(v, Player) &&
 				(!b.canDrawTo(r+1, c-1) || !has(b[IndexOf(r+1, c-1)], Empty)) &&
 				(!b.canDrawTo(r+1, c+1) || !has(b[IndexOf(r+1, c+1)], Empty)) {
 				red++
