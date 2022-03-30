@@ -119,13 +119,13 @@ func minimax(depth int, board Board, player bool, alpha int, beta int, m *Move) 
 func unrollSkips(r, c int, player bool, board Board, prev *Move) map[Move]Board {
 	m := make(map[Move]Board)
 	tmp := make(Board, len(board))
-	possible := tmp.getPossibleSkipsFor(r, c, player)
+	possible := tmp.getPossibleSkipsFor(Coordinate{r, c}, player, prev)
 	for _, p := range possible {
 		p.Previous = prev
 		copy(tmp, board)
-		followUps := tmp.applyMove(p, player)
+		followUps, _ := tmp.applyMove(p, player)
 		if followUps {
-			res := unrollSkips(p.ToRow, p.ToCol, player, tmp, &p)
+			res := unrollSkips(p.To.Row, p.To.Col, player, tmp, &p)
 			for k, v := range res {
 				m[k] = v
 			}
@@ -142,9 +142,9 @@ func possibleMoves(player bool, board Board) map[Move]Board {
 	for _, move := range possible {
 		tmp := make(Board, len(board))
 		copy(tmp, board)
-		followUps := tmp.applyMove(move, player)
+		followUps, _ := tmp.applyMove(move, player)
 		if followUps {
-			mx := unrollSkips(move.ToRow, move.ToCol, player, tmp, &move)
+			mx := unrollSkips(move.To.Row, move.To.Col, player, tmp, &move)
 			if len(mx) > 0 {
 				for k, v := range mx {
 					m[k] = v
@@ -164,7 +164,7 @@ func (b Board) getPossibleValidMovesForPlayer(player bool) []Move {
 	m := make([]Move, 0)
 	pieces := b.allPiecesFor(player)
 	for _, p := range pieces {
-		moves := b.getPossibleMoves(p.Row, p.Col, player)
+		moves := b.getPossibleMoves(p, player)
 		m = append(m, moves...)
 	}
 	return filterMoves(m)

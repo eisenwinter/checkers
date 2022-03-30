@@ -45,7 +45,7 @@ func run() {
 	var currentBoard game.Board
 
 	atlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
-	overlayText := text.New(pixel.V(10, 580), atlas)
+	overlayText := text.New(pixel.V(10, 10), atlas)
 	overlayText.Color = colornames.Magenta
 	for !win.Closed() {
 		dt := time.Since(last).Seconds()
@@ -73,13 +73,11 @@ func run() {
 								done := false
 								if len(moves) > 0 {
 									for _, v := range moves {
-										if v.ToCol == int(col) && v.ToRow == int(row) {
-											followUp := g.MakeMove(v)
-											if !followUp {
-												done = true
-												moves = []game.Move{}
-												highlight = []game.Coordinate{}
-											}
+										if v.To.Col == int(col) && v.To.Row == int(row) {
+											g.MakeMove(v)
+											done = true
+											moves = []game.Move{}
+											highlight = []game.Coordinate{}
 										}
 									}
 								}
@@ -169,7 +167,7 @@ func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []gam
 		imd.Color = colornames.Lightgreen
 		for _, v := range moves {
 			imd.Push(
-				pixel.V(float64(v.ToRow*cellSize+cellSize/2), float64(v.ToCol*cellSize+cellSize/2)),
+				pixel.V(float64(v.To.Row*cellSize+cellSize/2), float64(v.To.Col*cellSize+cellSize/2)),
 			)
 			imd.Circle(float64(cellSize/3), 0)
 		}

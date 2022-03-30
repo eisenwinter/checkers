@@ -95,7 +95,7 @@ func (g *Game) GameState() GameState {
 	otherPieces := g.board.allPiecesFor(!g.player)
 	om := make([]Move, 0)
 	for _, p := range otherPieces {
-		o := filterMoves(g.board.getPossibleMoves(p.Row, p.Col, !g.player))
+		o := filterMoves(g.board.getPossibleMoves(p, !g.player))
 		om = append(om, o...)
 	}
 	if len(om) == 0 {
@@ -129,9 +129,9 @@ func (g *Game) StatusDisplay() string {
 
 //checkForcedMove checks if thats a MUST play move
 func (g *Game) checkForcedMove(r, c int, player bool) bool {
-	im := g.board.getPossibleMoves(r, c, g.player)
+	im := g.board.getPossibleMoves(Coordinate{r, c}, g.player)
 	for _, v := range im {
-		if v.Must {
+		if v.Depth > 0 {
 			return true
 		}
 	}
@@ -143,9 +143,9 @@ func (g *Game) checkForcedMoves() []Move {
 	m := make([]Move, 0)
 	p := g.board.allPiecesFor(g.player)
 	for _, v := range p {
-		im := g.board.getPossibleMoves(v.Row, v.Col, g.player)
+		im := g.board.getPossibleMoves(v, g.player)
 		for _, v := range im {
-			if v.Must {
+			if v.Takes != nil || v.Depth > 0 {
 				m = append(m, v)
 			}
 		}
@@ -158,14 +158,15 @@ func (g *Game) GetPossibleMoves(r int, c int) ([]Move, []Coordinate) {
 	//we have to first check if any forced moves are ahead (take checker IS A MUST)
 	forced := g.checkForcedMoves()
 	if len(forced) > 0 {
+		f := filterMoves(forced)
 		hl := make([]Coordinate, 0)
-		for _, v := range forced {
-			hl = append(hl, Coordinate{v.FromRow, v.FromCol})
+		for _, v := range f {
+			hl = append(hl, v.From)
 		}
-		return forced, hl
+		return f, hl
 
 	}
-	return filterMoves(g.board.getPossibleMoves(r, c, g.player)), []Coordinate{{r, c}}
+	return filterMoves(g.board.getPossibleMoves(Coordinate{r, c}, g.player)), []Coordinate{{r, c}}
 }
 
 //Turn returns the current turn
@@ -182,7 +183,7 @@ func (g *Game) unrollMove(m *Move) {
 	if m.Previous != nil {
 		g.unrollMove(m.Previous)
 	}
-	g.MakeMove(*m)
+	g.makeMove(*m)
 	g.boardQueue = append(g.boardQueue, g.board)
 }
 
@@ -191,25 +192,29 @@ func (g *Game) MakeAIMove() {
 	if g.GameState() == GameStateRunning {
 		_, m := minimax(MaxDepth, g.board, g.player, AlphaStart, BetaStart, nil)
 		if m != nil {
-			g.unrollMove(m)
+			g.makeMove(*m)
 		} else {
 			panic("well well well this should not happend - no solution found")
 		}
 	}
 }
 
+func (g *Game) MakeMove(m Move) {
+	g.unrollMove(&m)
+}
+
 //MakeMove applies the given move to the board
 //if true is returned the corresponding player has to make another move
 //the next move has to be a forced move
-func (g *Game) MakeMove(m Move) bool {
-	taken := g.makeMove(m)
+func (g *Game) makeMove(m Move) {
+	g.board.applyMove(m, g.player)
+	g.refreshCount()
+	g.endTurn()
+
+}
+
+func (g *Game) endTurn() {
 	if g.GameState() == GameStateRunning {
-		if taken {
-			f := g.checkForcedMove(m.ToRow, m.ToCol, g.player)
-			if f {
-				return true
-			}
-		}
 		g.turn++
 		g.player = !g.player
 		log.Printf("Turn: %d | Current board eval: %d | Whites turn: %v", g.turn, g.board.evaluate(), g.player)
@@ -219,7 +224,6 @@ func (g *Game) MakeMove(m Move) bool {
 		log.Printf("Final board eval: %d | Whites turn: %v", g.board.evaluate(), g.player)
 	}
 	log.Print(g.StatusDisplay())
-	return false
 }
 
 //Player indiciates wich players turn it is (True = White, False = Red)
@@ -235,11 +239,4 @@ func (g *Game) DequeueBoard() Board {
 	b := g.boardQueue[0]
 	g.boardQueue = g.boardQueue[1:]
 	return b
-}
-
-//makeMove applies the made move
-func (g *Game) makeMove(m Move) bool {
-	pieceTaken := g.board.applyMove(m, g.player)
-	g.refreshCount()
-	return pieceTaken
 }
