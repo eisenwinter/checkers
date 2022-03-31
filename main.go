@@ -19,6 +19,7 @@ import (
 
 var fullAIMode = false
 var showEvalMode = false
+var showGridIndex = false
 
 const moveSeconds = 0.3
 
@@ -95,14 +96,14 @@ func run() {
 		mat = mat.Rotated(win.Bounds().Center(), -math.Pi/2)
 		grid.SetMatrix(mat)
 		if moving > 0 {
-			DrawBoard(grid, currentBoard, moves, highlight)
+			DrawBoard(grid, currentBoard, moves, highlight, atlas)
 		} else {
 			if g.HasBoardInQueue() {
 				currentBoard = g.DequeueBoard()
-				DrawBoard(grid, currentBoard, moves, highlight)
+				DrawBoard(grid, currentBoard, moves, highlight, atlas)
 				moving = moveSeconds
 			} else {
-				DrawBoard(grid, g.CurrentBoard(), moves, highlight)
+				DrawBoard(grid, g.CurrentBoard(), moves, highlight, atlas)
 			}
 		}
 
@@ -112,11 +113,27 @@ func run() {
 			fmt.Fprintf(overlayText, "%d", g.CurrentEvaulation())
 			overlayText.Draw(win, pixel.IM)
 		}
+		if showGridIndex {
+			for i := 0; i < 10; i++ {
+				for j := 0; j < 10; j++ {
+					indexText := text.New(pixel.V(float64(i*60)+5, float64(j*60)+5), atlas)
+
+					if (j+i%2)%2 == 0 {
+						indexText.Color = colornames.Lawngreen
+					} else {
+						indexText.Color = colornames.Darkgreen
+					}
+					fmt.Fprintf(indexText, "%d,%d", 9-j, i)
+					indexText.Draw(win, pixel.IM)
+				}
+			}
+		}
+
 		win.Update()
 	}
 }
 
-func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []game.Path) {
+func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []game.Path, atlas *text.Atlas) {
 	cellSize := 60
 	for i := 0; i < 10; i++ {
 		for j := 0; j < 10; j++ {
@@ -124,7 +141,6 @@ func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []gam
 				imd.Color = colornames.White
 			} else {
 				imd.Color = colornames.Black
-
 			}
 			imd.Push(
 				pixel.V(float64(i*cellSize), float64(j*cellSize)),
@@ -205,9 +221,11 @@ func main() {
 	log.SetOutput(new(logger))
 	aiMode := flag.Bool("ai", false, "full auto ai flag")
 	scoreMode := flag.Bool("s", false, "show score")
+	showIndex := flag.Bool("i", false, "show index")
 	flag.Parse()
 	fullAIMode = *aiMode
 	showEvalMode = *scoreMode
+	showGridIndex = *showIndex
 	log.Printf("AI only mode: %v", fullAIMode)
 	pixelgl.Run(run)
 }

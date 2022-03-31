@@ -16,7 +16,10 @@ func (b Board) evaluate() int {
 	base = base + (wk*25 - rk*25)
 
 	//weight of each piece in the backrow
-	wbr, rbr := b.getBackRowCount()
+	// wbr, rbr := b.getBackRowCount()
+	// base = base + (wbr*14 - rbr*14)
+
+	wbr, rbr := b.getGoldenStoneCount()
 	base = base + (wbr*14 - rbr*14)
 
 	//weight of each piece middle box position
@@ -24,8 +27,8 @@ func (b Board) evaluate() int {
 	base = base + (wmb*7 - rmb*7)
 
 	//weight of each piece in the middle two rows
-	wmr, rmr := b.getMiddleRowSideCount()
-	base = base + (wmr*2 - rmr*2)
+	// wmr, rmr := b.getMiddleRowSideCount()
+	// base = base + (wmr*2 - rmr*2)
 
 	//weight of a vulnerable piece
 	wvp, rvp, wvk, rvk := b.getVulnerablePieceCount()

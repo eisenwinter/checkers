@@ -1,24 +1,67 @@
 package game
 
-//getBackRowCount gets the number of pieces in the backrow heustric
-func (b Board) getBackRowCount() (white int, red int) {
+func (b Board) getGoldenStoneCount() (white int, red int) {
 	white = 0
 	red = 0
-	//red backrow
-	for i := 0; i < width; i++ {
-		idx := IndexOf(0, i)
-		if !has(b[idx], Empty) && !has(b[idx], King) {
-			if !has(b[idx], Player) {
-				red++
+	if b.must(Coordinate{0, 5}).isRedPiece() {
+		red = 1
+	}
+	if b.must(Coordinate{height - 1, 4}).isRedPiece() {
+		red = 1
+	}
+	return
+}
+
+//leggards and grapes
+
+func (b Board) getLeftSideCount() (white int, red int) {
+	white = 0
+	red = 0
+	for i := 0; i <= (height - 1); i++ {
+		for j := 0; j < 2; j++ {
+			idx := IndexOf(i, j)
+			if !has(b[idx], Empty) {
+				if has(b[idx], Player) {
+					white++
+				} else {
+					red++
+				}
 			}
 		}
 	}
-	//white backrow
-	for i := 0; i < width; i++ {
-		idx := IndexOf((height - 1), i)
-		if !has(b[idx], Empty) {
-			if has(b[idx], Player) && !has(b[idx], King) {
-				white++
+	return
+}
+
+func (b Board) getMiddleCount() (white int, red int) {
+	white = 0
+	red = 0
+	for i := 0; i <= (height - 1); i++ {
+		for j := 3; j < width-3; j++ {
+			idx := IndexOf(i, j)
+			if !has(b[idx], Empty) {
+				if has(b[idx], Player) {
+					white++
+				} else {
+					red++
+				}
+			}
+		}
+	}
+	return
+}
+
+func (b Board) getRightSideCount() (white int, red int) {
+	white = 0
+	red = 0
+	for i := 0; i <= (height - 1); i++ {
+		for j := width - 3; j < width; j++ {
+			idx := IndexOf(i, j)
+			if !has(b[idx], Empty) {
+				if has(b[idx], Player) {
+					white++
+				} else {
+					red++
+				}
 			}
 		}
 	}
@@ -40,6 +83,31 @@ func (b Board) getMiddleBoxCount() (white int, red int) {
 				} else {
 					red++
 				}
+			}
+		}
+	}
+	return
+}
+
+//getBackRowCount gets the number of pieces in the backrow heustric
+func (b Board) getBackRowCount() (white int, red int) {
+	white = 0
+	red = 0
+	//red backrow
+	for i := 0; i < width; i++ {
+		idx := IndexOf(0, i)
+		if !has(b[idx], Empty) && !has(b[idx], King) {
+			if !has(b[idx], Player) {
+				red++
+			}
+		}
+	}
+	//white backrow
+	for i := 0; i < width; i++ {
+		idx := IndexOf((height - 1), i)
+		if !has(b[idx], Empty) {
+			if has(b[idx], Player) && !has(b[idx], King) {
+				white++
 			}
 		}
 	}

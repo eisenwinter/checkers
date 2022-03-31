@@ -7,13 +7,20 @@ var width = 10
 type MoveType uint8
 
 //InvalidMove is not valid
-const InvalidMove = 0
+const InvalidMove MoveType = 0
 
 //Jump move is a normal movevment
-const JumpMove = 1
+const JumpMove MoveType = 1
 
 //SkipMove is a move where a piece gets taken
-const SkipMove = 2
+const SkipMove MoveType = 2
+
+type Direction uint8
+
+const DirectionNortWest Direction = 1
+const DirectionNortEast Direction = 2
+const DirectionSouthEast Direction = 3
+const DirectionSouthWest Direction = 4
 
 func IndexOf(r, c int) int {
 	return r*width + c
@@ -142,6 +149,33 @@ func (c Coordinate) rightwards(pos Coordinate) bool {
 
 func northeast(c Coordinate) (bool, Coordinate) {
 	return c.northEastOf()
+}
+
+func (c Coordinate) direction(to Coordinate) Direction {
+	if c.leftwards(to) && c.upwards(to) {
+		return DirectionNortWest
+	}
+	if c.rightwards(to) && c.upwards(to) {
+		return DirectionNortEast
+	}
+	if c.rightwards(to) && c.downwards(to) {
+		return DirectionSouthEast
+	}
+	return DirectionSouthWest
+}
+
+func (c Coordinate) inDirection(d Direction) (bool, Coordinate) {
+	switch d {
+	case DirectionNortEast:
+		return c.northEastOf()
+	case DirectionNortWest:
+		return c.northWestOf()
+	case DirectionSouthEast:
+		return c.southEastOf()
+	case DirectionSouthWest:
+		return c.southWestOf()
+	}
+	return false, Coordinate{}
 }
 
 func (c Coordinate) northEastOf() (bool, Coordinate) {
@@ -400,7 +434,7 @@ func (b Board) lineOfSightSkip(dir func(Coordinate) (bool, Coordinate), pos Coor
 				m = append(m, move)
 
 				nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
-				nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
+				nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move, pos.direction(cord))
 				for _, v := range nextMoves {
 					m = append(m, v)
 				}
@@ -412,7 +446,7 @@ func (b Board) lineOfSightSkip(dir func(Coordinate) (bool, Coordinate), pos Coor
 }
 
 //getPossibleSkipsFor returns all possible skips (take moves)
-func (b Board) getPossibleSkipsFor(pos Coordinate, player bool, prev *Move) []Move {
+func (b Board) getPossibleSkipsFor(pos Coordinate, player bool, prev *Move, dir Direction) []Move {
 	//Todo this needs board copies so it doesnt jump the pieces all ofer again
 	m := make([]Move, 0)
 	ok, f := b.at(pos)
@@ -437,17 +471,18 @@ func (b Board) getPossibleSkipsFor(pos Coordinate, player bool, prev *Move) []Mo
 			sw := b.lineOfSightSkip(southwest, pos, player, prev)
 			m = append(m, sw...)
 		} else {
-			nbs := pos.neighbourhood()
-			for _, c := range nbs {
-				if mt, cord := b.getMoveType(pos, c, player); mt == SkipMove {
+			ok, nbs := pos.inDirection(dir)
+			if ok {
+				if mt, cord := b.getMoveType(pos, nbs, player); mt == SkipMove {
 					depth := 0
 					if prev != nil {
 						depth = prev.Depth + 1
 					}
-					tmp := c.clone()
+					tmp := nbs.clone()
 					move := Move{pos, cord, &tmp, prev, depth}
+					m = append(m, move)
 					nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
-					nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
+					nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move, dir)
 					for _, v := range nextMoves {
 						m = append(m, v)
 					}
@@ -469,7 +504,7 @@ func (b Board) lineOfSightMoves(dir func(Coordinate) (bool, Coordinate), pos Coo
 				m = append(m, move)
 
 				nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
-				nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
+				nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move, pos.direction(cord))
 				for _, v := range nextMoves {
 					m = append(m, v)
 				}
@@ -527,7 +562,7 @@ func (b Board) getPossibleMoves(pos Coordinate, player bool) []Move {
 					m = append(m, move)
 					if mt == SkipMove {
 						nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
-						nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
+						nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move, pos.direction(cord))
 						for _, v := range nextMoves {
 							m = append(m, v)
 						}

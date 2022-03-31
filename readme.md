@@ -2,14 +2,14 @@
 
  ![Checkers](/doc/animation.gif)
 
->> IN THE MIDDLE OF REFACTORING - NOT WORKING RN
-
 Simple international checkers, playing arround with minimax heuristics.
 
 It can be launched in full ai vs ai mode with the -ai flag.
 The main goal here wasnt the gameitself but rather exploring minimax and heuristics.
 
 I started with adapted heurstics from https://github.com/kevingregor/Checkers/blob/master/Final%20Project%20Report.pdf but its ever evolving and changing right now.
+
+Right now trying to adapt to https://bonaludo.com/2017/04/21/international-100-square-draughts-strategy-basics/
 
 Due to the protection heuristic some AI vs AI games will result in some wall hugging.
 
