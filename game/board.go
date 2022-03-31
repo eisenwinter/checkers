@@ -34,6 +34,8 @@ const (
 	Player
 	//King inidicates that piece is a king
 	King
+	//Marked
+	Marked
 )
 
 //set sets the bitflag supplied
@@ -71,6 +73,14 @@ func (f Field) isWhitePiece() bool {
 	return !has(f, Empty) && has(f, Player)
 }
 
+func (f Field) isMarked() bool {
+	return !has(f, Empty) && has(f, Marked)
+}
+
+func (f Field) mark() Field {
+	return set(f, Marked)
+}
+
 func (f Field) isKing() bool {
 	return !has(f, Empty) && has(f, King)
 }
@@ -102,6 +112,10 @@ func (c Coordinate) neighbourhood() []Coordinate {
 	return n
 }
 
+type Path struct {
+	Coordinates []Coordinate
+}
+
 func (c Coordinate) ToIndex() int {
 	return IndexOf(c.Row, c.Col)
 }
@@ -124,6 +138,50 @@ func (c Coordinate) leftwards(pos Coordinate) bool {
 
 func (c Coordinate) rightwards(pos Coordinate) bool {
 	return c.Col < pos.Col
+}
+
+func northeast(c Coordinate) (bool, Coordinate) {
+	return c.northEastOf()
+}
+
+func (c Coordinate) northEastOf() (bool, Coordinate) {
+	if c.Row > 0 && c.Col < width-1 {
+		return true, c.Shift(-1, +1)
+	}
+	return false, Coordinate{}
+}
+
+func northwest(c Coordinate) (bool, Coordinate) {
+	return c.northWestOf()
+}
+
+func (c Coordinate) northWestOf() (bool, Coordinate) {
+	if c.Row > 0 && c.Col > 0 {
+		return true, c.Shift(-1, -1)
+	}
+	return false, Coordinate{}
+}
+
+func southeast(c Coordinate) (bool, Coordinate) {
+	return c.southEastOf()
+}
+
+func (c Coordinate) southEastOf() (bool, Coordinate) {
+	if c.Row < (height-1) && c.Col < (width-1) {
+		return true, c.Shift(+1, +1)
+	}
+	return false, Coordinate{}
+}
+
+func southwest(c Coordinate) (bool, Coordinate) {
+	return c.southWestOf()
+}
+
+func (c Coordinate) southWestOf() (bool, Coordinate) {
+	if c.Row < (height-1) && c.Col > 0 {
+		return true, c.Shift(+1, -1)
+	}
+	return false, Coordinate{}
 }
 
 func coordinateFromIndex(i int) Coordinate {
@@ -159,6 +217,12 @@ func (b Board) allPiecesFor(player bool) []Coordinate {
 		}
 	}
 	return p
+}
+
+func (b Board) copy() Board {
+	nextBoard := make(Board, len(b))
+	copy(nextBoard, b)
+	return nextBoard
 }
 
 //playable indicates the board is still playable
@@ -261,25 +325,23 @@ func (b Board) movePiece(from, to Coordinate, player bool) {
 	}
 }
 
-func (b Board) applyMove(m Move, player bool) (bool, bool) {
-	pieceTaken := false
+func (b Board) applyMove(m Move, player bool) bool {
 	kingPromoted := false
 	if b.canDrawTo(m.To.Row, m.To.Col) {
 		if m.Takes != nil {
 			b.removePiece(*m.Takes)
-			pieceTaken = true
 		}
 		b.movePiece(m.From, m.To, player)
 		if b.isBoardEnd(m.To.Row, player) && !b.must(m.To).isKing() {
-			b.promoteToKing(m.To)
+			kingPromoted = true
 		}
 	}
-	return pieceTaken, kingPromoted
+	return kingPromoted
 }
 
 //getMoveType returns if the move would be valid in terms of gameplay and returns the move type and row and column
 func (b Board) getMoveType(from, to Coordinate, player bool) (MoveType, Coordinate) {
-	ok, _ := b.at(from)
+	ok, f := b.at(from)
 	if !ok {
 		return InvalidMove, Coordinate{}
 	}
@@ -287,40 +349,66 @@ func (b Board) getMoveType(from, to Coordinate, player bool) (MoveType, Coordina
 	if !ok {
 		return InvalidMove, Coordinate{}
 	}
-	if t.isEmpty() && player && from.upwards(to) {
+	if (t.isEmpty() || t.isMarked()) && player && (from.upwards(to) || f.isKing()) {
 		return JumpMove, to
 	}
-	if t.isEmpty() && !player && from.downwards(to) {
+	if (t.isEmpty() || t.isMarked()) && !player && (from.downwards(to) || f.isKing()) {
 		return JumpMove, to
 	}
 
 	if from.leftwards(to) && from.upwards(to) {
 		ok, tl, ctl := b.topLeftOf(to)
-		if ok && !t.isEmpty() && t.isWhitePiece() != player && tl.isEmpty() {
+		//the not marked on the field is for the rule: are not removed during the move, they are removed only after the entire multi-jump move is complete
+		if ok && !t.isEmpty() && t.isWhitePiece() != player && tl.isEmpty() && !tl.isMarked() && !t.isMarked() {
 			return SkipMove, ctl
 		}
 
 	}
 	if from.leftwards(to) && from.downwards(to) {
 		ok, bl, cbl := b.bottomLeftOf(to)
-		if ok && !t.isEmpty() && t.isWhitePiece() != player && bl.isEmpty() {
+		if ok && !t.isEmpty() && t.isWhitePiece() != player && bl.isEmpty() && !bl.isMarked() && !t.isMarked() {
 			return SkipMove, cbl
 		}
 	}
 	if from.rightwards(to) && from.upwards(to) {
 		ok, tr, ctr := b.topRightOf(to)
-		if ok && !t.isEmpty() && t.isWhitePiece() != player && tr.isEmpty() {
+		if ok && !t.isEmpty() && t.isWhitePiece() != player && tr.isEmpty() && !tr.isMarked() && !t.isMarked() {
 			return SkipMove, ctr
 		}
 	}
 	if from.rightwards(to) && from.downwards(to) {
 		ok, br, cbr := b.bottomRightOf(to)
-		if ok && !t.isEmpty() && t.isWhitePiece() != player && br.isEmpty() {
+		if ok && !t.isEmpty() && t.isWhitePiece() != player && br.isEmpty() && !br.isMarked() && !t.isMarked() {
 			return SkipMove, cbr
 		}
 	}
-
 	return InvalidMove, Coordinate{}
+}
+
+func (b Board) lineOfSightSkip(dir func(Coordinate) (bool, Coordinate), pos Coordinate, player bool, prev *Move) []Move {
+	m := make([]Move, 0)
+	for ok, current := dir(pos); ok; ok, current = dir(current) {
+		if mt, cord := b.getMoveType(pos, current, player); mt != InvalidMove {
+			move := Move{pos, cord, nil, nil, 0}
+			if prev != nil {
+				move.Previous = prev
+				move.Depth = prev.Depth + 1
+			}
+			if mt == SkipMove {
+				tmp := current.clone()
+				move.Takes = &tmp
+				m = append(m, move)
+
+				nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
+				nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
+				for _, v := range nextMoves {
+					m = append(m, v)
+				}
+				return m
+			}
+		}
+	}
+	return m
 }
 
 //getPossibleSkipsFor returns all possible skips (take moves)
@@ -336,29 +424,71 @@ func (b Board) getPossibleSkipsFor(pos Coordinate, player bool, prev *Move) []Mo
 		if f.isWhitePiece() != player {
 			return m
 		}
-		nbs := pos.neighbourhood()
-		for _, c := range nbs {
-			if mt, cord := b.getMoveType(pos, c, player); mt == SkipMove {
-				depth := 0
-				if prev != nil {
-					depth = prev.Depth + 1
+		if f.isKing() {
+			nw := b.lineOfSightSkip(northwest, pos, player, prev)
+			m = append(m, nw...)
+
+			ne := b.lineOfSightSkip(northeast, pos, player, prev)
+			m = append(m, ne...)
+
+			se := b.lineOfSightSkip(southeast, pos, player, prev)
+			m = append(m, se...)
+
+			sw := b.lineOfSightSkip(southwest, pos, player, prev)
+			m = append(m, sw...)
+		} else {
+			nbs := pos.neighbourhood()
+			for _, c := range nbs {
+				if mt, cord := b.getMoveType(pos, c, player); mt == SkipMove {
+					depth := 0
+					if prev != nil {
+						depth = prev.Depth + 1
+					}
+					tmp := c.clone()
+					move := Move{pos, cord, &tmp, prev, depth}
+					nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
+					nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
+					for _, v := range nextMoves {
+						m = append(m, v)
+					}
 				}
-				tmp := c.clone()
-				move := Move{pos, cord, &tmp, prev, depth}
-				nextMoves := b.getPossibleSkipsFor(cord, player, &move)
+			}
+		}
+	}
+	return m
+}
+
+func (b Board) lineOfSightMoves(dir func(Coordinate) (bool, Coordinate), pos Coordinate, player bool) []Move {
+	m := make([]Move, 0)
+	for ok, current := dir(pos); ok; ok, current = dir(current) {
+		if mt, cord := b.getMoveType(pos, current, player); mt != InvalidMove {
+			move := Move{pos, cord, nil, nil, 0}
+			if mt == SkipMove {
+				tmp := current.clone()
+				move.Takes = &tmp
+				m = append(m, move)
+
+				nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
+				nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
 				for _, v := range nextMoves {
 					m = append(m, v)
 				}
-
+				return m
 			}
+			m = append(m, move)
+		} else {
+			return m
 		}
-
-		if has(f, King) {
-			//king can jump any direction weee
-		}
-
 	}
 	return m
+}
+
+func boardForNextSkip(b Board, from, to, taken Coordinate, player bool) Board {
+	nextBoard := b.copy()
+	nextBoard[IndexOf(taken.Row, taken.Col)] = nextBoard.must(taken).mark()
+	nextBoard.movePiece(from, to, player)
+	return nextBoard
+
 }
 
 //getPossibleMoves returns any possible moves for that field
@@ -373,19 +503,34 @@ func (b Board) getPossibleMoves(pos Coordinate, player bool) []Move {
 		if f.isWhitePiece() != player {
 			return m
 		}
-		nbs := pos.neighbourhood()
-		for _, c := range nbs {
-			if mt, cord := b.getMoveType(pos, c, player); mt != InvalidMove {
-				move := Move{pos, cord, nil, nil, 0}
-				if mt == SkipMove {
-					tmp := c.clone()
-					move.Takes = &tmp
-				}
-				m = append(m, move)
-				if mt == SkipMove {
-					nextMoves := b.getPossibleSkipsFor(cord, player, &move)
-					for _, v := range nextMoves {
-						m = append(m, v)
+		if f.isKing() {
+			nw := b.lineOfSightMoves(northwest, pos, player)
+			m = append(m, nw...)
+
+			ne := b.lineOfSightMoves(northeast, pos, player)
+			m = append(m, ne...)
+
+			se := b.lineOfSightMoves(southeast, pos, player)
+			m = append(m, se...)
+
+			sw := b.lineOfSightMoves(southwest, pos, player)
+			m = append(m, sw...)
+		} else {
+			nbs := pos.neighbourhood()
+			for _, c := range nbs {
+				if mt, cord := b.getMoveType(pos, c, player); mt != InvalidMove {
+					move := Move{pos, cord, nil, nil, 0}
+					if mt == SkipMove {
+						tmp := c.clone()
+						move.Takes = &tmp
+					}
+					m = append(m, move)
+					if mt == SkipMove {
+						nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
+						nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
+						for _, v := range nextMoves {
+							m = append(m, v)
+						}
 					}
 				}
 			}
@@ -449,20 +594,21 @@ func boardSetup(board Board) Board {
 	for i := 0; i < 20; i++ {
 		r, _ := reverseIndexOf(i * 2)
 		if (r+1)%2 == 0 {
-			board[i*2+1] = clear(board[i*2], Empty)
+			board[i*2] = clear(board[i*2], Empty)
 		} else {
-			board[i*2] = clear(board[i*2+1], Empty)
+			board[i*2+1] = clear(board[i*2+1], Empty)
 		}
 	}
 
 	for i := IndexOf(6, 0); i < (IndexOf(6, 0) + 20*2); i = i + 2 {
 		r, _ := reverseIndexOf(i)
 		if (r+1)%2 == 0 {
-			board[i+1] = set(clear(board[i], Empty), Player)
+			board[i] = set(clear(board[i], Empty), Player)
 		} else {
-			board[i] = set(clear(board[i+1], Empty), Player)
+			board[i+1] = set(clear(board[i+1], Empty), Player)
 		}
 
 	}
+
 	return board
 }

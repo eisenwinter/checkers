@@ -116,45 +116,23 @@ func minimax(depth int, board Board, player bool, alpha int, beta int, m *Move) 
 	}
 }
 
-func unrollSkips(r, c int, player bool, board Board, prev *Move) map[Move]Board {
-	m := make(map[Move]Board)
-	tmp := make(Board, len(board))
-	possible := tmp.getPossibleSkipsFor(Coordinate{r, c}, player, prev)
-	for _, p := range possible {
-		p.Previous = prev
-		copy(tmp, board)
-		followUps, _ := tmp.applyMove(p, player)
-		if followUps {
-			res := unrollSkips(p.To.Row, p.To.Col, player, tmp, &p)
-			for k, v := range res {
-				m[k] = v
-			}
-		} else {
-			m[p] = tmp
-		}
+func unrollMove(b *Board, move Move, player bool, maxDepth int) {
+	if move.Previous != nil {
+		unrollMove(b, *move.Previous, player, maxDepth)
 	}
-	return m
+	k := b.applyMove(move, player)
+	if move.Depth == maxDepth && k {
+		b.promoteToKing(move.To)
+	}
 }
 
 func possibleMoves(player bool, board Board) map[Move]Board {
 	m := make(map[Move]Board)
 	possible := board.getPossibleValidMovesForPlayer(player)
 	for _, move := range possible {
-		tmp := make(Board, len(board))
-		copy(tmp, board)
-		followUps, _ := tmp.applyMove(move, player)
-		if followUps {
-			mx := unrollSkips(move.To.Row, move.To.Col, player, tmp, &move)
-			if len(mx) > 0 {
-				for k, v := range mx {
-					m[k] = v
-				}
-			} else {
-				m[move] = tmp
-			}
-		} else {
-			m[move] = tmp
-		}
+		tmp := board.copy()
+		unrollMove(&tmp, move, player, move.Depth)
+		m[move] = tmp
 	}
 	return m
 }

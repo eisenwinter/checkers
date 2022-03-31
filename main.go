@@ -20,7 +20,7 @@ import (
 var fullAIMode = false
 var showEvalMode = false
 
-const aiMoveSeconds = 0.3
+const moveSeconds = 0.3
 
 func run() {
 	cfg := pixelgl.WindowConfig{
@@ -39,7 +39,7 @@ func run() {
 	g := game.SetupGame()
 	g.Start()
 	moves := []game.Move{}
-	highlight := []game.Coordinate{}
+	highlight := []game.Path{}
 	last := time.Now()
 	moving := 0.0
 	var currentBoard game.Board
@@ -77,7 +77,7 @@ func run() {
 											g.MakeMove(v)
 											done = true
 											moves = []game.Move{}
-											highlight = []game.Coordinate{}
+											highlight = []game.Path{}
 										}
 									}
 								}
@@ -100,7 +100,7 @@ func run() {
 			if g.HasBoardInQueue() {
 				currentBoard = g.DequeueBoard()
 				DrawBoard(grid, currentBoard, moves, highlight)
-				moving = aiMoveSeconds
+				moving = moveSeconds
 			} else {
 				DrawBoard(grid, g.CurrentBoard(), moves, highlight)
 			}
@@ -116,14 +116,15 @@ func run() {
 	}
 }
 
-func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []game.Coordinate) {
+func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []game.Path) {
 	cellSize := 60
 	for i := 0; i < 10; i++ {
 		for j := 0; j < 10; j++ {
 			if (j+i%2)%2 == 0 {
-				imd.Color = colornames.Black
-			} else {
 				imd.Color = colornames.White
+			} else {
+				imd.Color = colornames.Black
+
 			}
 			imd.Push(
 				pixel.V(float64(i*cellSize), float64(j*cellSize)),
@@ -163,25 +164,38 @@ func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []gam
 		}
 	}
 
+	if len(hl) > 0 {
+		for _, p := range hl {
+
+			for i, v := range p.Coordinates {
+				if i == 0 {
+					imd.Color = colornames.Lightsalmon
+					imd.Push(
+						pixel.V(float64(v.Row*cellSize+3), float64(v.Col*cellSize+3)),
+						pixel.V(float64(v.Row*cellSize+cellSize-3), float64(v.Col*cellSize+cellSize-3)),
+					)
+					imd.Rectangle(4)
+				} else {
+					imd.Color = colornames.Lightblue
+					imd.Push(
+						pixel.V(float64(v.Row*cellSize+cellSize/2), float64(v.Col*cellSize+cellSize/2)),
+					)
+					imd.Circle(float64(cellSize/3), 0)
+				}
+
+			}
+		}
+	}
+
 	if len(moves) > 0 {
-		imd.Color = colornames.Lightgreen
 		for _, v := range moves {
+			imd.Color = colornames.Lightgreen
 			imd.Push(
 				pixel.V(float64(v.To.Row*cellSize+cellSize/2), float64(v.To.Col*cellSize+cellSize/2)),
 			)
 			imd.Circle(float64(cellSize/3), 0)
 		}
-	}
 
-	if len(hl) > 0 {
-		imd.Color = colornames.Lightsalmon
-		for _, v := range hl {
-			imd.Push(
-				pixel.V(float64(v.Row*cellSize+3), float64(v.Col*cellSize+3)),
-				pixel.V(float64(v.Row*cellSize+cellSize-3), float64(v.Col*cellSize+cellSize-3)),
-			)
-			imd.Rectangle(4)
-		}
 	}
 
 }

@@ -153,8 +153,28 @@ func (g *Game) checkForcedMoves() []Move {
 	return m
 }
 
+func pathFromMove(m Move, p *Path) {
+	if m.Previous != nil {
+		pathFromMove(*m.Previous, p)
+	} else {
+		p.Coordinates = append(p.Coordinates, m.From)
+	}
+	p.Coordinates = append(p.Coordinates, m.To)
+}
+func pathsFromMoves(m []Move) []Path {
+	p := make([]Path, 0)
+	for _, v := range m {
+		path := Path{
+			Coordinates: make([]Coordinate, 0),
+		}
+		pathFromMove(v, &path)
+		p = append(p, path)
+	}
+	return p
+}
+
 //GetPossibleMoves returns the possible moves for that given field
-func (g *Game) GetPossibleMoves(r int, c int) ([]Move, []Coordinate) {
+func (g *Game) GetPossibleMoves(r int, c int) ([]Move, []Path) {
 	//we have to first check if any forced moves are ahead (take checker IS A MUST)
 	forced := g.checkForcedMoves()
 	if len(forced) > 0 {
@@ -163,10 +183,12 @@ func (g *Game) GetPossibleMoves(r int, c int) ([]Move, []Coordinate) {
 		for _, v := range f {
 			hl = append(hl, v.From)
 		}
-		return f, hl
+		return f, pathsFromMoves(f)
 
 	}
-	return filterMoves(g.board.getPossibleMoves(Coordinate{r, c}, g.player)), []Coordinate{{r, c}}
+
+	moves := filterMoves(g.board.getPossibleMoves(Coordinate{r, c}, g.player))
+	return moves, pathsFromMoves(moves)
 }
 
 //Turn returns the current turn
@@ -179,12 +201,19 @@ func (g *Game) Time() int {
 	return int(time.Since(g.started).Seconds())
 }
 
-func (g *Game) unrollMove(m *Move) {
+func (g *Game) unrollMove(m *Move, maxDepth int) {
 	if m.Previous != nil {
-		g.unrollMove(m.Previous)
+		g.unrollMove(m.Previous, maxDepth)
 	}
-	g.makeMove(*m)
-	g.boardQueue = append(g.boardQueue, g.board)
+	k := g.makeMove(*m)
+	if m.Depth == maxDepth && k {
+		g.board.promoteToKing(m.To)
+	}
+	g.boardQueue = append(g.boardQueue, g.board.copy())
+	if maxDepth == m.Depth {
+		g.refreshCount()
+		g.endTurn()
+	}
 }
 
 //MakeAIMove triggers a computer move
@@ -192,7 +221,7 @@ func (g *Game) MakeAIMove() {
 	if g.GameState() == GameStateRunning {
 		_, m := minimax(MaxDepth, g.board, g.player, AlphaStart, BetaStart, nil)
 		if m != nil {
-			g.makeMove(*m)
+			g.unrollMove(m, m.Depth)
 		} else {
 			panic("well well well this should not happend - no solution found")
 		}
@@ -200,16 +229,15 @@ func (g *Game) MakeAIMove() {
 }
 
 func (g *Game) MakeMove(m Move) {
-	g.unrollMove(&m)
+	g.unrollMove(&m, m.Depth)
 }
 
 //MakeMove applies the given move to the board
 //if true is returned the corresponding player has to make another move
 //the next move has to be a forced move
-func (g *Game) makeMove(m Move) {
-	g.board.applyMove(m, g.player)
-	g.refreshCount()
-	g.endTurn()
+func (g *Game) makeMove(m Move) bool {
+	promoted := g.board.applyMove(m, g.player)
+	return promoted
 
 }
 
