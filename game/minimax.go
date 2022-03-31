@@ -1,8 +1,10 @@
 package game
 
 import (
+	"fmt"
 	"log"
 	"math"
+	"strings"
 )
 
 const MaxDepth = 4
@@ -12,8 +14,8 @@ const BetaStart = math.MaxInt
 func (b Board) evaluate() int {
 	w, r, wk, rk := b.getCounts()
 	//regular pieces weight 10, kings 15
-	base := (w * 15) - (r * 15)
-	base = base + (wk*25 - rk*25)
+	base := (w * 14) - (r * 14)
+	base = base + (wk*40 - rk*40)
 
 	//weight of each piece in the backrow
 	// wbr, rbr := b.getBackRowCount()
@@ -26,46 +28,72 @@ func (b Board) evaluate() int {
 	wmb, rmb := b.getMiddleBoxCount()
 	base = base + (wmb*7 - rmb*7)
 
-	//weight of each piece in the middle two rows
-	// wmr, rmr := b.getMiddleRowSideCount()
-	// base = base + (wmr*2 - rmr*2)
+	wms, rms := b.getMiddleCount()
+	base = base + (wms*3 - rms*3)
 
-	//weight of a vulnerable piece
-	wvp, rvp, wvk, rvk := b.getVulnerablePieceCount()
-	base = base + (wvp * -12) - (rvp * -12)
-	base = base + (wvk * -8) - (rvk * -8)
+	wls, rls := b.getLeftSideCount()
+	base = base + (wls*1 - rls*1)
+
+	wrs, rrs := b.getRightSideCount()
+	base = base + (wrs*1 - rrs*1)
 
 	//weight of a protected piece
 	wpr, rpr := b.getProtectionCount()
-	base = base + (wpr*5 - rpr*5)
+	base = base + (wpr*4 - rpr*4)
 
 	wst, rst, wstk, rstk := b.getStuckPiecesCount()
 	base = base + (wst * -1) - (rst * -1) + (wstk*-2 - rstk*-2)
 
-	wfr, rfr := b.getFortressCount()
-	base = base + (wfr*2 - rfr*2)
+	wfs, rfs := b.getFullSquares()
+	base = base + (wfs*14 - rfs*14)
 
-	wds, rds := b.getDiamondShapes()
-	base = base + (wds*7 - rds*7)
+	whs, rhs := b.getHalfSquare()
+	base = base + (whs*12 - rhs*12)
 
-	wrun, rrun := b.getRunAwayCount()
-	base = base + (wrun*3 - rrun*3)
+	wgs, rgs := b.getFullGates()
+	base = base + (wgs*9 - rgs*9)
+
+	whgs, rhgs := b.getHalfGates()
+	base = base + (whgs*7 - rhgs*7)
+
+	wps, rps := b.getPincers()
+	base = base + (wps*5 - rps*5)
+
 	return base
 }
 
-func (b Board) LogBoardHeurstics() {
-	wbr, rbr := b.getBackRowCount()
-	wmb, rmb := b.getMiddleBoxCount()
-	wvp, rvp, wvk, rvk := b.getVulnerablePieceCount()
-	wpr, rpr := b.getProtectionCount()
-	wst, rst, wstk, rstk := b.getStuckPiecesCount()
-	wmr, rmr := b.getMiddleRowSideCount()
+type HeustricStat struct {
+	name  string
+	white int
+	red   int
+}
 
-	wfr, rfr := b.getFortressCount()
-	wds, rds := b.getDiamondShapes()
-	wrun, rrun := b.getRunAwayCount()
-	log.Printf("White: Backrow %d | Box: %d | M.Side: %d | Vulnerable: %d (K: %d) | Protected: %d | Stuck: %d (K: %d) | Fortified: %d | Diamonds: %d | Runaway: %d", wbr, wmb, wmr, wvp, wvk, wpr, wst, wstk, wfr, wds, wrun)
-	log.Printf("Red:   Backrow %d | Box: %d | M.Side: %d | Vulnerable: %d (K: %d) | Protected: %d | Stuck: %d (K: %d) | Fortified: %d | Diamonds: %d | Runaway: %d", rbr, rmb, rmr, rvp, rvk, rpr, rst, rstk, rfr, rds, rrun)
+func (b Board) LogBoardHeurstics() {
+	stats := make([]HeustricStat, 0)
+	wpr, rpr := b.getProtectionCount()
+	stats = append(stats, HeustricStat{"protection count", wpr, rpr})
+	wst, rst, _, _ := b.getStuckPiecesCount()
+	stats = append(stats, HeustricStat{"stuck pieces", wst, rst})
+	wfs, rfs := b.getFullSquares()
+	stats = append(stats, HeustricStat{"full squares", wfs, rfs})
+	whs, rhs := b.getHalfSquare()
+	stats = append(stats, HeustricStat{"half squares", whs, rhs})
+	wgs, rgs := b.getFullGates()
+	stats = append(stats, HeustricStat{"full gates", wgs, rgs})
+	whgs, rhgs := b.getHalfGates()
+	stats = append(stats, HeustricStat{"half gates", whgs, rhgs})
+	wps, rps := b.getPincers()
+	stats = append(stats, HeustricStat{"pincers", wps, rps})
+	var whiteStats strings.Builder
+	var redStats strings.Builder
+	for _, v := range stats {
+		fmt.Fprintf(&whiteStats, " %s: %02d |", v.name, v.white)
+		fmt.Fprintf(&redStats, " %s: %02d |", v.name, v.red)
+	}
+	log.Printf("White| %s", whiteStats.String())
+	log.Printf("Red  | %s", redStats.String())
+	// log.Printf("White: Backrow %d | Box: %d | M.Side: %d | Vulnerable: %d (K: %d) | Protected: %d | Stuck: %d (K: %d) | Fortified: %d | Diamonds: %d | Runaway: %d", wbr, wmb, wmr, wvp, wvk, wpr, wst, wstk, wfr, wds, wrun)
+	// log.Printf("Red:   Backrow %d | Box: %d | M.Side: %d | Vulnerable: %d (K: %d) | Protected: %d | Stuck: %d (K: %d) | Fortified: %d | Diamonds: %d | Runaway: %d", rbr, rmb, rmr, rvp, rvk, rpr, rst, rstk, rfr, rds, rrun)
 }
 
 func maxOf(i, j int) int {
