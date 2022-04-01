@@ -141,8 +141,8 @@ func (b Board) getFullSquares() (white int, red int) {
 		{E, E, P, E, E},
 	}
 
-	white = findMask(b, mask, true)
-	red = findMask(b, mask, false)
+	white = findMask(b, mask, true, true)
+	red = findMask(b, mask, false, true)
 	return
 }
 
@@ -157,8 +157,8 @@ func (b Board) getHalfSquare() (white int, red int) {
 		{E, E, E, E, E},
 	}
 
-	white = findMask(b, mask, true)
-	red = findMask(b, mask, false)
+	white = findMask(b, mask, true, false)
+	red = findMask(b, mask, false, false)
 	return
 }
 
@@ -176,8 +176,8 @@ func (b Board) getFullGates() (white int, red int) {
 		{E, E, P},
 	}
 
-	white = findMask(b, lmask, true) + findMask(b, rmask, true)
-	red = findMask(b, lmask.FlipHorizontally(), false) + findMask(b, rmask.FlipHorizontally(), false)
+	white = findMask(b, lmask, true, false) + findMask(b, rmask, true, false)
+	red = findMask(b, lmask.FlipHorizontally(), false, false) + findMask(b, rmask.FlipHorizontally(), false, false)
 	return
 }
 
@@ -190,8 +190,8 @@ func (b Board) getHalfGates() (white int, red int) {
 		{P, E, E},
 	}
 	maskFlipped := mask.FlipHorizontally()
-	white = findMask(b, mask, true) + findMask(b, maskFlipped, true)
-	red = findMask(b, mask, false) + findMask(b, maskFlipped, false)
+	white = findMask(b, mask, true, false) + findMask(b, maskFlipped, true, false)
+	red = findMask(b, mask, false, false) + findMask(b, maskFlipped, false, false)
 	return
 }
 
@@ -202,8 +202,8 @@ func (b Board) getPincers() (white int, red int) {
 		{E, P, E, P, E},
 		{P, E, E, E, P},
 	}
-	white = findMask(b, mask, true)
-	red = findMask(b, mask.FlipHorizontally(), false)
+	white = findMask(b, mask, true, false)
+	red = findMask(b, mask.FlipHorizontally(), false, false)
 	return
 }
 
@@ -234,7 +234,19 @@ func (m Mask) XOR(other Mask) bool {
 	return match
 }
 
-func findMask(board Board, mask Mask, player bool) int {
+func (m Mask) AlphaMatch(other Mask) bool {
+	for i, v := range m {
+		for j, vc := range v {
+			if bool(vc) && !bool(other[i][j]) {
+				return false
+			}
+
+		}
+	}
+	return true
+}
+
+func findMask(board Board, mask Mask, player bool, alpha bool) int {
 	getMask := func(i, j, w, h int) Mask {
 		new := make(Mask, h)
 		ix := 0
@@ -250,12 +262,19 @@ func findMask(board Board, mask Mask, player bool) int {
 		return new
 	}
 	count := 0
-	for i := 0; i < height-len(mask); i++ {
+	for i := 0; i <= height-len(mask); i++ {
 		cols := len(mask[0])
-		for j := 0; j < width-cols; j++ {
-			if !getMask(i, j, cols, len(mask)).XOR(mask) {
-				count++
+		for j := 0; j <= width-cols; j++ {
+			if alpha {
+				if mask.AlphaMatch(getMask(i, j, cols, len(mask))) {
+					count++
+				}
+			} else {
+				if !getMask(i, j, cols, len(mask)).XOR(mask) {
+					count++
+				}
 			}
+
 		}
 	}
 	return count
@@ -387,19 +406,38 @@ func pieceCanBeTaken(b Board, p Coordinate, player bool) bool {
 func (b Board) getVulnerablePiecesCount() (white int, red int) {
 	white = 0
 	red = 0
-	for i, v := range b {
-		if !has(v, Empty) {
-			r, c := reverseIndexOf(i)
-			if has(v, Player) {
-				if pieceCanBeTaken(b, Coordinate{r, c}, true) {
-					white++
-				}
 
-			} else {
-				if pieceCanBeTaken(b, Coordinate{r, c}, false) {
-					red++
-				}
-			}
+	wskipps := b.getAllPossibleSkips(true)
+	for _, s := range wskipps {
+		red += (1 + s.Depth)
+	}
+	rskipps := b.getAllPossibleSkips(false)
+	for _, s := range rskipps {
+		white += white + (1 + s.Depth)
+	}
+	return
+}
+
+func (b Board) getSuicidalPiecesCount() (white int, red int) {
+	white = 0
+	red = 0
+
+	whiteMoves := b.getPossibleValidMovesForPlayer(true)
+	for _, s := range whiteMoves {
+		tmp := b.copy()
+		unrollMove(&tmp, s, true, s.Depth)
+		enemy := b.getAllPossibleSkips(false)
+		for _, s := range enemy {
+			white += (1 + s.Depth)
+		}
+	}
+	rskipps := b.getPossibleValidMovesForPlayer(false)
+	for _, s := range rskipps {
+		tmp := b.copy()
+		unrollMove(&tmp, s, true, s.Depth)
+		enemy := b.getAllPossibleSkips(true)
+		for _, s := range enemy {
+			red += (1 + s.Depth)
 		}
 	}
 	return

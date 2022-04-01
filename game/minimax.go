@@ -14,17 +14,24 @@ const BetaStart = math.MaxInt
 func (b Board) evaluate() int {
 	w, r, wk, rk := b.getCounts()
 
-	base := (w * 14) - (r * 14)
-	base = base + (wk*35 - rk*35)
+	if w == 0 {
+		return math.MinInt32
+	}
+	if r == 0 {
+		return math.MaxInt32
+	}
+
+	base := (w * 20) - (r * 20)
+	base = base + (wk*25 - rk*25)
 
 	wbr, rbr := b.getGoldenStoneCount()
-	base = base + (wbr*14 - rbr*14)
+	base = base + (wbr*7 - rbr*7)
 
 	wmb, rmb := b.getMiddleBoxCount()
 	base = base + (wmb*7 - rmb*7)
 
 	wms, rms := b.getMiddleCount()
-	base = base + (wms*3 - rms*3)
+	base = base + (wms*2 - rms*2)
 
 	wls, rls := b.getLeftSideCount()
 	base = base + (wls*1 - rls*1)
@@ -33,34 +40,45 @@ func (b Board) evaluate() int {
 	base = base + (wrs*1 - rrs*1)
 
 	wpr, rpr := b.getProtectionCount()
-	base = base + (wpr*10 - rpr*10)
+	base = base + (wpr*4 - rpr*4)
 
 	wst, rst, wstk, rstk := b.getStuckPiecesCount()
 	base = base + (wst * -1) - (rst * -1) + (wstk*-2 - rstk*-2)
+
+	if wst == w {
+		return math.MinInt32
+	}
+
+	if rst == r {
+		return math.MaxInt32
+	}
 
 	wlgr, rlgr := b.getLeggardAndGrapeCount()
 	base = base + (wlgr * -1) - (rlgr * -1)
 
 	wfs, rfs := b.getFullSquares()
-	base = base + (wfs*14 - rfs*14)
+	base = base + (wfs*7 - rfs*7)
 
 	whs, rhs := b.getHalfSquare()
-	base = base + (whs*12 - rhs*12)
+	base = base + (whs*4 - rhs*4)
 
 	wgs, rgs := b.getFullGates()
-	base = base + (wgs*9 - rgs*9)
+	base = base + (wgs*3 - rgs*3)
 
 	whgs, rhgs := b.getHalfGates()
-	base = base + (whgs*7 - rhgs*7)
+	base = base + (whgs*2 - rhgs*2)
 
 	wps, rps := b.getPincers()
-	base = base + (wps*7 - rps*7)
+	base = base + (wps*3 - rps*2)
 
 	llw, lrw := b.getLargestConnectedField()
 	base = base + (llw - lrw)
 
 	wvp, rvp := b.getVulnerablePiecesCount()
-	base = base + (wvp * -14) - (rvp * -14)
+	base = base + (wvp * -50) - (rvp * -50)
+
+	wsc, rsc := b.getSuicidalPiecesCount()
+	base = base + (wsc * -20) - (rsc * -20)
 
 	return base
 }
@@ -113,6 +131,9 @@ func (b Board) LogBoardHeurstics() {
 	wvp, rvp := b.getVulnerablePiecesCount()
 	stats = append(stats, HeustricStat{"vulnerable pieces", wvp, rvp})
 
+	wsc, rsc := b.getSuicidalPiecesCount()
+	stats = append(stats, HeustricStat{"suicidal pieces", wsc, rsc})
+
 	var whiteStats strings.Builder
 	var redStats strings.Builder
 	for _, v := range stats {
@@ -138,7 +159,8 @@ func minOf(i, j int) int {
 }
 
 func minimax(depth int, board Board, player bool, alpha int, beta int, m *Move) (int, *Move) {
-	if depth == 0 || !board.playable() {
+	terminal := !board.playable()
+	if depth == 0 || terminal {
 		return board.evaluate(), m
 	}
 	if player {

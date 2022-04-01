@@ -447,7 +447,6 @@ func (b Board) lineOfSightSkip(dir func(Coordinate) (bool, Coordinate), pos Coor
 
 //getPossibleSkipsFor returns all possible skips (take moves)
 func (b Board) getPossibleSkipsFor(pos Coordinate, player bool, prev *Move) []Move {
-	//Todo this needs board copies so it doesnt jump the pieces all ofer again
 	m := make([]Move, 0)
 	ok, f := b.at(pos)
 	if !ok {
@@ -524,6 +523,21 @@ func boardForNextSkip(b Board, from, to, taken Coordinate, player bool) Board {
 	nextBoard.movePiece(from, to, player)
 	return nextBoard
 
+}
+
+func (b Board) getAllPossibleSkips(player bool) []Move {
+	m := make([]Move, 0)
+	p := b.allPiecesFor(player)
+	for _, v := range p {
+		im := b.getPossibleMoves(v, player)
+		for _, v := range im {
+			if v.Takes != nil {
+				m = append(m, v)
+			}
+		}
+
+	}
+	return m
 }
 
 //getPossibleMoves returns any possible moves for that field
@@ -644,7 +658,6 @@ func boardSetup(board Board) Board {
 		}
 
 	}
-
 	return board
 }
 
