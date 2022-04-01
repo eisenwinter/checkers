@@ -13,18 +13,13 @@ const BetaStart = math.MaxInt
 
 func (b Board) evaluate() int {
 	w, r, wk, rk := b.getCounts()
-	//regular pieces weight 10, kings 15
-	base := (w * 14) - (r * 14)
-	base = base + (wk*40 - rk*40)
 
-	//weight of each piece in the backrow
-	// wbr, rbr := b.getBackRowCount()
-	// base = base + (wbr*14 - rbr*14)
+	base := (w * 14) - (r * 14)
+	base = base + (wk*35 - rk*35)
 
 	wbr, rbr := b.getGoldenStoneCount()
 	base = base + (wbr*14 - rbr*14)
 
-	//weight of each piece middle box position
 	wmb, rmb := b.getMiddleBoxCount()
 	base = base + (wmb*7 - rmb*7)
 
@@ -37,12 +32,14 @@ func (b Board) evaluate() int {
 	wrs, rrs := b.getRightSideCount()
 	base = base + (wrs*1 - rrs*1)
 
-	//weight of a protected piece
 	wpr, rpr := b.getProtectionCount()
-	base = base + (wpr*4 - rpr*4)
+	base = base + (wpr*10 - rpr*10)
 
 	wst, rst, wstk, rstk := b.getStuckPiecesCount()
 	base = base + (wst * -1) - (rst * -1) + (wstk*-2 - rstk*-2)
+
+	wlgr, rlgr := b.getLeggardAndGrapeCount()
+	base = base + (wlgr * -1) - (rlgr * -1)
 
 	wfs, rfs := b.getFullSquares()
 	base = base + (wfs*14 - rfs*14)
@@ -57,7 +54,13 @@ func (b Board) evaluate() int {
 	base = base + (whgs*7 - rhgs*7)
 
 	wps, rps := b.getPincers()
-	base = base + (wps*5 - rps*5)
+	base = base + (wps*7 - rps*7)
+
+	llw, lrw := b.getLargestConnectedField()
+	base = base + (llw - lrw)
+
+	wvp, rvp := b.getVulnerablePiecesCount()
+	base = base + (wvp * -14) - (rvp * -14)
 
 	return base
 }
@@ -70,6 +73,25 @@ type HeustricStat struct {
 
 func (b Board) LogBoardHeurstics() {
 	stats := make([]HeustricStat, 0)
+
+	wbr, rbr := b.getGoldenStoneCount()
+	stats = append(stats, HeustricStat{"g.stones", wbr, rbr})
+
+	wlgr, rlgr := b.getLeggardAndGrapeCount()
+	stats = append(stats, HeustricStat{"l&g", wlgr, rlgr})
+
+	wmb, rmb := b.getMiddleBoxCount()
+	stats = append(stats, HeustricStat{"m.box", wmb, rmb})
+
+	wms, rms := b.getMiddleCount()
+	stats = append(stats, HeustricStat{"m.", wms, rms})
+
+	wls, rls := b.getLeftSideCount()
+	stats = append(stats, HeustricStat{"l.", wls, rls})
+
+	wrs, rrs := b.getRightSideCount()
+	stats = append(stats, HeustricStat{"r.", wrs, rrs})
+
 	wpr, rpr := b.getProtectionCount()
 	stats = append(stats, HeustricStat{"protection count", wpr, rpr})
 	wst, rst, _, _ := b.getStuckPiecesCount()
@@ -84,6 +106,13 @@ func (b Board) LogBoardHeurstics() {
 	stats = append(stats, HeustricStat{"half gates", whgs, rhgs})
 	wps, rps := b.getPincers()
 	stats = append(stats, HeustricStat{"pincers", wps, rps})
+
+	llw, lrw := b.getLargestConnectedField()
+	stats = append(stats, HeustricStat{"largest field", llw, lrw})
+
+	wvp, rvp := b.getVulnerablePiecesCount()
+	stats = append(stats, HeustricStat{"vulnerable pieces", wvp, rvp})
+
 	var whiteStats strings.Builder
 	var redStats strings.Builder
 	for _, v := range stats {
@@ -92,8 +121,6 @@ func (b Board) LogBoardHeurstics() {
 	}
 	log.Printf("White| %s", whiteStats.String())
 	log.Printf("Red  | %s", redStats.String())
-	// log.Printf("White: Backrow %d | Box: %d | M.Side: %d | Vulnerable: %d (K: %d) | Protected: %d | Stuck: %d (K: %d) | Fortified: %d | Diamonds: %d | Runaway: %d", wbr, wmb, wmr, wvp, wvk, wpr, wst, wstk, wfr, wds, wrun)
-	// log.Printf("Red:   Backrow %d | Box: %d | M.Side: %d | Vulnerable: %d (K: %d) | Protected: %d | Stuck: %d (K: %d) | Fortified: %d | Diamonds: %d | Runaway: %d", rbr, rmb, rmr, rvp, rvk, rpr, rst, rstk, rfr, rds, rrun)
 }
 
 func maxOf(i, j int) int {

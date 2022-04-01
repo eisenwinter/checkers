@@ -39,8 +39,8 @@ func run() {
 	grid := imdraw.New(nil)
 	g := game.SetupGame()
 	g.Start()
-	moves := []game.Move{}
-	highlight := []game.Path{}
+	moves := []game.PossibleMove{}
+	selectedPiece := []game.PossibleMove{}
 	last := time.Now()
 	moving := 0.0
 	var currentBoard game.Board
@@ -66,24 +66,27 @@ func run() {
 					if fullAIMode {
 						g.MakeAIMove()
 					} else {
+						if len(moves) == 0 {
+							moves = g.GetPossibleMoves()
+						}
 						if win.JustPressed(pixelgl.MouseButtonLeft) {
 							vec := win.MousePosition()
 							col := math.Floor(vec.X / 60)
 							row := math.Floor((win.Bounds().H() - vec.Y) / 60)
 							if row < 10 && col < 10 {
-								done := false
-								if len(moves) > 0 {
-									for _, v := range moves {
-										if v.To.Col == int(col) && v.To.Row == int(row) {
-											g.MakeMove(v)
-											done = true
-											moves = []game.Move{}
-											highlight = []game.Path{}
-										}
+								for _, v := range selectedPiece {
+									if v.Move.To.Col == int(col) && v.Move.To.Row == int(row) {
+										g.MakeMove(v.Move)
+										moves = []game.PossibleMove{}
+										break
 									}
 								}
-								if !done {
-									moves, highlight = g.GetPossibleMoves(int(row), int(col))
+								selectedPiece = []game.PossibleMove{}
+								for _, v := range moves {
+									if v.Path.Coordinates[0].Col == int(col) && v.Path.Coordinates[0].Row == int(row) {
+										selectedPiece = append(selectedPiece, v)
+									}
+
 								}
 							}
 						}
@@ -96,14 +99,14 @@ func run() {
 		mat = mat.Rotated(win.Bounds().Center(), -math.Pi/2)
 		grid.SetMatrix(mat)
 		if moving > 0 {
-			DrawBoard(grid, currentBoard, moves, highlight, atlas)
+			DrawBoard(grid, currentBoard, moves, selectedPiece)
 		} else {
 			if g.HasBoardInQueue() {
 				currentBoard = g.DequeueBoard()
-				DrawBoard(grid, currentBoard, moves, highlight, atlas)
+				DrawBoard(grid, currentBoard, moves, selectedPiece)
 				moving = moveSeconds
 			} else {
-				DrawBoard(grid, g.CurrentBoard(), moves, highlight, atlas)
+				DrawBoard(grid, g.CurrentBoard(), moves, selectedPiece)
 			}
 		}
 
@@ -133,7 +136,7 @@ func run() {
 	}
 }
 
-func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []game.Path, atlas *text.Atlas) {
+func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.PossibleMove, hl []game.PossibleMove) {
 	cellSize := 60
 	for i := 0; i < 10; i++ {
 		for j := 0; j < 10; j++ {
@@ -180,12 +183,26 @@ func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []gam
 		}
 	}
 
-	if len(hl) > 0 {
-		for _, p := range hl {
+	if len(moves) > 0 {
+		for _, v := range moves {
+			if v.Move.Takes != nil {
+				imd.Color = colornames.Salmon
+			} else {
+				imd.Color = colornames.Lightgreen
+			}
 
-			for i, v := range p.Coordinates {
+			imd.Push(
+				pixel.V(float64(v.Path.Coordinates[0].Row*cellSize+3), float64(v.Path.Coordinates[0].Col*cellSize+3)),
+				pixel.V(float64(v.Path.Coordinates[0].Row*cellSize+cellSize-3), float64(v.Path.Coordinates[0].Col*cellSize+cellSize-3)),
+			)
+			imd.Rectangle(4)
+		}
+	}
+	if len(hl) > 0 {
+		for _, m := range hl {
+			for i, v := range m.Path.Coordinates {
 				if i == 0 {
-					imd.Color = colornames.Lightsalmon
+					imd.Color = colornames.Steelblue
 					imd.Push(
 						pixel.V(float64(v.Row*cellSize+3), float64(v.Col*cellSize+3)),
 						pixel.V(float64(v.Row*cellSize+cellSize-3), float64(v.Col*cellSize+cellSize-3)),
@@ -198,16 +215,10 @@ func DrawBoard(imd *imdraw.IMDraw, board game.Board, moves []game.Move, hl []gam
 					)
 					imd.Circle(float64(cellSize/3), 0)
 				}
-
 			}
-		}
-	}
-
-	if len(moves) > 0 {
-		for _, v := range moves {
 			imd.Color = colornames.Lightgreen
 			imd.Push(
-				pixel.V(float64(v.To.Row*cellSize+cellSize/2), float64(v.To.Col*cellSize+cellSize/2)),
+				pixel.V(float64(m.Move.To.Row*cellSize+cellSize/2), float64(m.Move.To.Col*cellSize+cellSize/2)),
 			)
 			imd.Circle(float64(cellSize/3), 0)
 		}

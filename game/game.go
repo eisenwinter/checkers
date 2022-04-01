@@ -26,6 +26,8 @@ func (g *Game) Start() {
 	g.running = true
 	g.started = time.Now()
 	g.boardQueue = make([]Board, 0)
+	g.board.LogBoardHeurstics()
+	log.Printf("Starting evulation: %d", g.CurrentEvaulation())
 }
 
 //IsRunning indicates if the game is still running
@@ -172,23 +174,35 @@ func pathsFromMoves(m []Move) []Path {
 	}
 	return p
 }
-
-//GetPossibleMoves returns the possible moves for that given field
-func (g *Game) GetPossibleMoves(r int, c int) ([]Move, []Path) {
-	//we have to first check if any forced moves are ahead (take checker IS A MUST)
-	forced := g.checkForcedMoves()
-	if len(forced) > 0 {
-		f := filterMoves(forced)
-		hl := make([]Coordinate, 0)
-		for _, v := range f {
-			hl = append(hl, v.From)
+func mapPossibleMove(m []Move) []PossibleMove {
+	pos := make([]PossibleMove, 0)
+	for _, v := range m {
+		path := Path{
+			Coordinates: make([]Coordinate, 0),
 		}
-		return f, pathsFromMoves(f)
-
+		pathFromMove(v, &path)
+		pos = append(pos, PossibleMove{v, path})
 	}
 
-	moves := filterMoves(g.board.getPossibleMoves(Coordinate{r, c}, g.player))
-	return moves, pathsFromMoves(moves)
+	return pos
+}
+
+type PossibleMove struct {
+	Move Move
+	Path Path
+}
+
+//GetPossibleMoves returns the possible moves for that given field
+func (g *Game) GetPossibleMoves() []PossibleMove {
+
+	m := make([]Move, 0)
+	p := g.board.allPiecesFor(g.player)
+	for _, v := range p {
+		im := g.board.getPossibleMoves(v, g.player)
+		m = append(m, im...)
+	}
+	m = filterMoves(m)
+	return mapPossibleMove(m)
 }
 
 //Turn returns the current turn

@@ -434,7 +434,7 @@ func (b Board) lineOfSightSkip(dir func(Coordinate) (bool, Coordinate), pos Coor
 				m = append(m, move)
 
 				nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
-				nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move, pos.direction(cord))
+				nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
 				for _, v := range nextMoves {
 					m = append(m, v)
 				}
@@ -446,7 +446,7 @@ func (b Board) lineOfSightSkip(dir func(Coordinate) (bool, Coordinate), pos Coor
 }
 
 //getPossibleSkipsFor returns all possible skips (take moves)
-func (b Board) getPossibleSkipsFor(pos Coordinate, player bool, prev *Move, dir Direction) []Move {
+func (b Board) getPossibleSkipsFor(pos Coordinate, player bool, prev *Move) []Move {
 	//Todo this needs board copies so it doesnt jump the pieces all ofer again
 	m := make([]Move, 0)
 	ok, f := b.at(pos)
@@ -471,8 +471,8 @@ func (b Board) getPossibleSkipsFor(pos Coordinate, player bool, prev *Move, dir 
 			sw := b.lineOfSightSkip(southwest, pos, player, prev)
 			m = append(m, sw...)
 		} else {
-			ok, nbs := pos.inDirection(dir)
-			if ok {
+			coords := pos.neighbourhood()
+			for _, nbs := range coords {
 				if mt, cord := b.getMoveType(pos, nbs, player); mt == SkipMove {
 					depth := 0
 					if prev != nil {
@@ -482,7 +482,7 @@ func (b Board) getPossibleSkipsFor(pos Coordinate, player bool, prev *Move, dir 
 					move := Move{pos, cord, &tmp, prev, depth}
 					m = append(m, move)
 					nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
-					nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move, dir)
+					nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
 					for _, v := range nextMoves {
 						m = append(m, v)
 					}
@@ -504,7 +504,7 @@ func (b Board) lineOfSightMoves(dir func(Coordinate) (bool, Coordinate), pos Coo
 				m = append(m, move)
 
 				nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
-				nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move, pos.direction(cord))
+				nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
 				for _, v := range nextMoves {
 					m = append(m, v)
 				}
@@ -562,7 +562,7 @@ func (b Board) getPossibleMoves(pos Coordinate, player bool) []Move {
 					m = append(m, move)
 					if mt == SkipMove {
 						nextBoard := boardForNextSkip(b, pos, cord, *move.Takes, player)
-						nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move, pos.direction(cord))
+						nextMoves := nextBoard.getPossibleSkipsFor(cord, player, &move)
 						for _, v := range nextMoves {
 							m = append(m, v)
 						}
@@ -646,4 +646,28 @@ func boardSetup(board Board) Board {
 	}
 
 	return board
+}
+
+func debugSetPincers(board Board) {
+	board[IndexOf(7, 2)] = set(clear(board[IndexOf(7, 2)], Empty), Player)
+	board[IndexOf(6, 3)] = set(clear(board[IndexOf(6, 3)], Empty), Player)
+	board[IndexOf(6, 5)] = set(clear(board[IndexOf(6, 5)], Empty), Player)
+	board[IndexOf(7, 6)] = set(clear(board[IndexOf(7, 6)], Empty), Player)
+
+	board[IndexOf(2, 1)] = clear(board[IndexOf(2, 1)], Empty)
+	board[IndexOf(3, 2)] = clear(board[IndexOf(3, 2)], Empty)
+	board[IndexOf(3, 4)] = clear(board[IndexOf(3, 4)], Empty)
+	board[IndexOf(2, 5)] = clear(board[IndexOf(2, 5)], Empty)
+}
+
+func debugSetFullGate(board Board) {
+	board[IndexOf(6, 3)] = set(clear(board[IndexOf(6, 3)], Empty), Player)
+	board[IndexOf(6, 5)] = set(clear(board[IndexOf(6, 5)], Empty), Player)
+	board[IndexOf(7, 4)] = set(clear(board[IndexOf(7, 4)], Empty), Player)
+	board[IndexOf(8, 3)] = set(clear(board[IndexOf(8, 3)], Empty), Player)
+
+	board[IndexOf(3, 4)] = clear(board[IndexOf(3, 4)], Empty)
+	board[IndexOf(3, 6)] = clear(board[IndexOf(3, 6)], Empty)
+	board[IndexOf(1, 4)] = clear(board[IndexOf(1, 4)], Empty)
+	board[IndexOf(2, 5)] = clear(board[IndexOf(2, 5)], Empty)
 }
