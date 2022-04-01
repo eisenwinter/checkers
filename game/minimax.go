@@ -11,6 +11,8 @@ const MaxDepth = 4
 const AlphaStart = math.MinInt
 const BetaStart = math.MaxInt
 
+const pieceBaseVaue = 20
+
 func (b Board) evaluate() int {
 	w, r, wk, rk := b.getCounts()
 
@@ -21,58 +23,52 @@ func (b Board) evaluate() int {
 		return math.MaxInt32
 	}
 
-	base := (w * 20) - (r * 20)
-	base = base + (wk*25 - rk*25)
+	base := (w * pieceBaseVaue) - (r * pieceBaseVaue)
+	base = base + (wk*pieceBaseVaue*2 - rk*pieceBaseVaue*2)
 
 	wbr, rbr := b.getGoldenStoneCount()
-	base = base + (wbr*7 - rbr*7)
+	base = base + (wbr - rbr)
 
 	wmb, rmb := b.getMiddleBoxCount()
-	base = base + (wmb*7 - rmb*7)
-
+	base = base + (wmb*3 - rmb*3)
 	wms, rms := b.getMiddleCount()
 	base = base + (wms*2 - rms*2)
-
 	wls, rls := b.getLeftSideCount()
 	base = base + (wls*1 - rls*1)
-
 	wrs, rrs := b.getRightSideCount()
 	base = base + (wrs*1 - rrs*1)
-
 	wpr, rpr := b.getProtectionCount()
 	base = base + (wpr*4 - rpr*4)
 
 	wst, rst, wstk, rstk := b.getStuckPiecesCount()
-	base = base + (wst * -1) - (rst * -1) + (wstk*-2 - rstk*-2)
-
+	base = base + (wst * -1 * (pieceBaseVaue / 2)) - (rst * -1 * (pieceBaseVaue / 2)) + (wstk*-2*(pieceBaseVaue/2) - rstk*-2*(pieceBaseVaue/2))
 	if wst == w {
 		return math.MinInt32
 	}
-
 	if rst == r {
 		return math.MaxInt32
 	}
 
 	wlgr, rlgr := b.getLeggardAndGrapeCount()
-	base = base + (wlgr * -1) - (rlgr * -1)
+	base = base + (wlgr * -1 * pieceBaseVaue) - (rlgr * -1 * pieceBaseVaue)
 
 	wfs, rfs := b.getFullSquares()
-	base = base + (wfs*7 - rfs*7)
+	base = base + (wfs*9*pieceBaseVaue - rfs*9*pieceBaseVaue)
 
 	whs, rhs := b.getHalfSquare()
-	base = base + (whs*4 - rhs*4)
+	base = base + (whs*5*pieceBaseVaue - rhs*5*pieceBaseVaue)
 
 	wgs, rgs := b.getFullGates()
-	base = base + (wgs*3 - rgs*3)
+	base = base + (wgs*4*pieceBaseVaue - rgs*4*pieceBaseVaue)
 
 	whgs, rhgs := b.getHalfGates()
-	base = base + (whgs*2 - rhgs*2)
+	base = base + (whgs*3*pieceBaseVaue - rhgs*3*pieceBaseVaue)
 
 	wps, rps := b.getPincers()
-	base = base + (wps*3 - rps*2)
+	base = base + (wps*4*pieceBaseVaue - rps*4*pieceBaseVaue)
 
 	llw, lrw := b.getLargestConnectedField()
-	base = base + (llw - lrw)
+	base = base + (llw*2*pieceBaseVaue - lrw*2*pieceBaseVaue)
 
 	wvp, rvp := b.getVulnerablePiecesCount()
 	base = base + (wvp * -50) - (rvp * -50)
@@ -80,59 +76,74 @@ func (b Board) evaluate() int {
 	wsc, rsc := b.getSuicidalPiecesCount()
 	base = base + (wsc * -20) - (rsc * -20)
 
+	//white := b.getPossibleValidMovesForPlayer(true)
+	//red := b.getPossibleValidMovesForPlayer(false)
+
+	//rethinking this
+	//so we basically check all moves once and apply a possible evaulation
+	//of the resutls
+	//a move is good IF
+	//the move saves a check from beeing taken
+	//the move protects a checker
+	//the move lead to a long jump
+
+	//a move is bad IF
+	//the move leads to the checker beeing taken (anti suicide measure)
+	//the move makes a checker vulnerable (ends protection of checker)
+
 	return base
 }
 
-type HeustricStat struct {
+type HeuristicStat struct {
 	name  string
 	white int
 	red   int
 }
 
 func (b Board) LogBoardHeurstics() {
-	stats := make([]HeustricStat, 0)
+	stats := make([]HeuristicStat, 0)
 
 	wbr, rbr := b.getGoldenStoneCount()
-	stats = append(stats, HeustricStat{"g.stones", wbr, rbr})
+	stats = append(stats, HeuristicStat{"g.stones", wbr, rbr})
 
 	wlgr, rlgr := b.getLeggardAndGrapeCount()
-	stats = append(stats, HeustricStat{"l&g", wlgr, rlgr})
+	stats = append(stats, HeuristicStat{"l&g", wlgr, rlgr})
 
 	wmb, rmb := b.getMiddleBoxCount()
-	stats = append(stats, HeustricStat{"m.box", wmb, rmb})
+	stats = append(stats, HeuristicStat{"m.box", wmb, rmb})
 
 	wms, rms := b.getMiddleCount()
-	stats = append(stats, HeustricStat{"m.", wms, rms})
+	stats = append(stats, HeuristicStat{"m.", wms, rms})
 
 	wls, rls := b.getLeftSideCount()
-	stats = append(stats, HeustricStat{"l.", wls, rls})
+	stats = append(stats, HeuristicStat{"l.", wls, rls})
 
 	wrs, rrs := b.getRightSideCount()
-	stats = append(stats, HeustricStat{"r.", wrs, rrs})
+	stats = append(stats, HeuristicStat{"r.", wrs, rrs})
 
 	wpr, rpr := b.getProtectionCount()
-	stats = append(stats, HeustricStat{"protection count", wpr, rpr})
+	stats = append(stats, HeuristicStat{"protection count", wpr, rpr})
 	wst, rst, _, _ := b.getStuckPiecesCount()
-	stats = append(stats, HeustricStat{"stuck pieces", wst, rst})
+	stats = append(stats, HeuristicStat{"stuck pieces", wst, rst})
 	wfs, rfs := b.getFullSquares()
-	stats = append(stats, HeustricStat{"full squares", wfs, rfs})
+	stats = append(stats, HeuristicStat{"full squares", wfs, rfs})
 	whs, rhs := b.getHalfSquare()
-	stats = append(stats, HeustricStat{"half squares", whs, rhs})
+	stats = append(stats, HeuristicStat{"half squares", whs, rhs})
 	wgs, rgs := b.getFullGates()
-	stats = append(stats, HeustricStat{"full gates", wgs, rgs})
+	stats = append(stats, HeuristicStat{"full gates", wgs, rgs})
 	whgs, rhgs := b.getHalfGates()
-	stats = append(stats, HeustricStat{"half gates", whgs, rhgs})
+	stats = append(stats, HeuristicStat{"half gates", whgs, rhgs})
 	wps, rps := b.getPincers()
-	stats = append(stats, HeustricStat{"pincers", wps, rps})
+	stats = append(stats, HeuristicStat{"pincers", wps, rps})
 
 	llw, lrw := b.getLargestConnectedField()
-	stats = append(stats, HeustricStat{"largest field", llw, lrw})
+	stats = append(stats, HeuristicStat{"largest field", llw, lrw})
 
 	wvp, rvp := b.getVulnerablePiecesCount()
-	stats = append(stats, HeustricStat{"vulnerable pieces", wvp, rvp})
+	stats = append(stats, HeuristicStat{"vulnerable pieces", wvp, rvp})
 
 	wsc, rsc := b.getSuicidalPiecesCount()
-	stats = append(stats, HeustricStat{"suicidal pieces", wsc, rsc})
+	stats = append(stats, HeuristicStat{"suicidal pieces", wsc, rsc})
 
 	var whiteStats strings.Builder
 	var redStats strings.Builder
