@@ -233,6 +233,28 @@ type Move struct {
 	Depth    int
 }
 
+func (m Move) allTakedowns() []Coordinate {
+	c := make([]Coordinate, 0)
+	if m.Takes != nil {
+		c = append(c, *m.Takes)
+		if m.Previous != nil {
+			p := m.Previous.allTakedowns()
+			c = append(c, p...)
+		}
+	}
+	return c
+}
+
+func (m Move) pathway() []Coordinate {
+	c := make([]Coordinate, 0)
+	if m.Previous != nil {
+		p := m.Previous.pathway()
+		c = append(c, p...)
+	}
+	c = append(c, m.To)
+	return c
+}
+
 //Board is the basic game board structure
 type Board []Field
 

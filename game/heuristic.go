@@ -567,3 +567,81 @@ func (b Board) getLargestConnectedField() (white int, red int) {
 	}
 	return
 }
+
+func heuristicSavingMove(b Board, m Move, player bool) bool {
+	skips := b.getAllPossibleSkips(!player)
+	for _, v := range skips {
+		td := v.allTakedowns()
+		for _, t := range td {
+			if m.From.Row == t.Row && m.From.Col == t.Col {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func heuristicProtectingMove(b Board, m Move, player bool) bool {
+	skips := b.getAllPossibleSkips(!player)
+	for _, v := range skips {
+		td := v.pathway()
+		for _, t := range td {
+			if m.To.Row == t.Row && m.To.Col == t.Col {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func heuristicMoveLeadsToKing(b Board, m Move, player bool) bool {
+	tmp := b.copy()
+	return unrollMove(&tmp, m, player, m.Depth)
+}
+
+func heuristicMoveLeadsToWin(b Board, m Move, player bool) bool {
+	tmp := b.copy()
+	unrollMove(&tmp, m, player, m.Depth)
+	w, r, _, _ := tmp.getCounts()
+	if !player && w == 0 {
+		return true
+	}
+	if player && r == 0 {
+		return true
+	}
+	wst, rst, _, _ := tmp.getStuckPiecesCount()
+	if !player && w == wst {
+		return true
+	}
+	if player && r == rst {
+		return true
+	}
+	return false
+}
+
+func heuristicGetsTaken(b Board, m Move, player bool) bool {
+	tmp := b.copy()
+	unrollMove(&tmp, m, player, m.Depth)
+	skips := tmp.getAllPossibleSkips(!player)
+	for _, v := range skips {
+		td := v.allTakedowns()
+		for _, t := range td {
+			if m.To.Row == t.Row && m.To.Col == t.Col {
+				return true
+			}
+		}
+	}
+	return false
+}
+func heuristicLooseProtectingMove(b Board, m Move, player bool) bool {
+	skips := b.getAllPossibleSkips(!player)
+	for _, v := range skips {
+		td := v.pathway()
+		for _, t := range td {
+			if m.From.Row == t.Row && m.From.Col == t.Col {
+				return true
+			}
+		}
+	}
+	return false
+}

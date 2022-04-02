@@ -11,7 +11,7 @@ const MaxDepth = 4
 const AlphaStart = math.MinInt
 const BetaStart = math.MaxInt
 
-const pieceBaseVaue = 20
+const pieceBaseVaue = 1
 
 func (b Board) evaluate() int {
 	w, r, wk, rk := b.getCounts()
@@ -23,11 +23,11 @@ func (b Board) evaluate() int {
 		return math.MaxInt32
 	}
 
-	base := (w * pieceBaseVaue) - (r * pieceBaseVaue)
-	base = base + (wk*pieceBaseVaue*2 - rk*pieceBaseVaue*2)
+	base := (w * pieceBaseVaue * 2) - (r * pieceBaseVaue * 2)
+	base = base + (wk*pieceBaseVaue*15 - rk*pieceBaseVaue*15)
 
 	wbr, rbr := b.getGoldenStoneCount()
-	base = base + (wbr - rbr)
+	base = base + (wbr*3 - rbr*3)
 
 	wmb, rmb := b.getMiddleBoxCount()
 	base = base + (wmb*3 - rmb*3)
@@ -40,8 +40,7 @@ func (b Board) evaluate() int {
 	wpr, rpr := b.getProtectionCount()
 	base = base + (wpr*4 - rpr*4)
 
-	wst, rst, wstk, rstk := b.getStuckPiecesCount()
-	base = base + (wst * -1 * (pieceBaseVaue / 2)) - (rst * -1 * (pieceBaseVaue / 2)) + (wstk*-2*(pieceBaseVaue/2) - rstk*-2*(pieceBaseVaue/2))
+	wst, rst, _, _ := b.getStuckPiecesCount()
 	if wst == w {
 		return math.MinInt32
 	}
@@ -49,47 +48,74 @@ func (b Board) evaluate() int {
 		return math.MaxInt32
 	}
 
-	wlgr, rlgr := b.getLeggardAndGrapeCount()
-	base = base + (wlgr * -1 * pieceBaseVaue) - (rlgr * -1 * pieceBaseVaue)
+	// base = base + (wst * -1) - (rst * -1) + (wstk*-2 - rstk*-2)
+
+	// wlgr, rlgr := b.getLeggardAndGrapeCount()
+	// base = base + (wlgr * -1 * pieceBaseVaue) - (rlgr * -1 * pieceBaseVaue)
 
 	wfs, rfs := b.getFullSquares()
-	base = base + (wfs*9*pieceBaseVaue - rfs*9*pieceBaseVaue)
+	base = base + (wfs*5 - rfs*5)
 
 	whs, rhs := b.getHalfSquare()
-	base = base + (whs*5*pieceBaseVaue - rhs*5*pieceBaseVaue)
+	base = base + (whs*3 - rhs*3)
 
 	wgs, rgs := b.getFullGates()
-	base = base + (wgs*4*pieceBaseVaue - rgs*4*pieceBaseVaue)
+	base = base + (wgs*2 - rgs*2)
 
 	whgs, rhgs := b.getHalfGates()
-	base = base + (whgs*3*pieceBaseVaue - rhgs*3*pieceBaseVaue)
+	base = base + (whgs - rhgs)
 
 	wps, rps := b.getPincers()
-	base = base + (wps*4*pieceBaseVaue - rps*4*pieceBaseVaue)
+	base = base + (wps*2 - rps*2)
 
 	llw, lrw := b.getLargestConnectedField()
-	base = base + (llw*2*pieceBaseVaue - lrw*2*pieceBaseVaue)
+	base = base + (llw - lrw)
 
-	wvp, rvp := b.getVulnerablePiecesCount()
-	base = base + (wvp * -50) - (rvp * -50)
+	// wvp, rvp := b.getVulnerablePiecesCount()
+	// base = base + (wvp * -5) - (rvp * -5)
 
-	wsc, rsc := b.getSuicidalPiecesCount()
-	base = base + (wsc * -20) - (rsc * -20)
+	// wsc, rsc := b.getSuicidalPiecesCount()
+	// base = base + (wsc * -20) - (rsc * -20)
 
-	//white := b.getPossibleValidMovesForPlayer(true)
-	//red := b.getPossibleValidMovesForPlayer(false)
+	whiteMoveWeight := 0
+	redMoveWeight := 0
 
-	//rethinking this
-	//so we basically check all moves once and apply a possible evaulation
-	//of the resutls
-	//a move is good IF
-	//the move saves a check from beeing taken
-	//the move protects a checker
-	//the move lead to a long jump
+	players := []bool{true, false}
+	for _, p := range players {
+		moves := b.getPossibleValidMovesForPlayer(p)
+		for _, w := range moves {
+			moveWeight := 0
+			//the move saves a check from beeing taken
+			if heuristicSavingMove(b, w, true) {
+				moveWeight += pieceBaseVaue * 14
+			}
+			if heuristicProtectingMove(b, w, true) {
+				moveWeight += pieceBaseVaue * 16
+			}
+			if heuristicMoveLeadsToKing(b, w, true) {
+				moveWeight += pieceBaseVaue * 20
+			}
+			if heuristicMoveLeadsToWin(b, w, true) {
+				moveWeight += 1000
+			}
+			if w.Depth > 0 {
+				moveWeight += (50 * pieceBaseVaue) + (w.Depth + pieceBaseVaue)
+			}
+			if heuristicGetsTaken(b, w, true) {
+				moveWeight += (-99 * pieceBaseVaue)
+			}
+			if heuristicLooseProtectingMove(b, w, true) {
+				moveWeight += (-15 * pieceBaseVaue)
+			}
+			if p {
+				whiteMoveWeight = maxOf(whiteMoveWeight, moveWeight)
+			} else {
+				redMoveWeight = maxOf(redMoveWeight, moveWeight)
+			}
 
-	//a move is bad IF
-	//the move leads to the checker beeing taken (anti suicide measure)
-	//the move makes a checker vulnerable (ends protection of checker)
+		}
+	}
+	base += ((whiteMoveWeight * 2) - (redMoveWeight * 2))
 
 	return base
 }
@@ -106,8 +132,8 @@ func (b Board) LogBoardHeurstics() {
 	wbr, rbr := b.getGoldenStoneCount()
 	stats = append(stats, HeuristicStat{"g.stones", wbr, rbr})
 
-	wlgr, rlgr := b.getLeggardAndGrapeCount()
-	stats = append(stats, HeuristicStat{"l&g", wlgr, rlgr})
+	// wlgr, rlgr := b.getLeggardAndGrapeCount()
+	// stats = append(stats, HeuristicStat{"l&g", wlgr, rlgr})
 
 	wmb, rmb := b.getMiddleBoxCount()
 	stats = append(stats, HeuristicStat{"m.box", wmb, rmb})
@@ -139,11 +165,11 @@ func (b Board) LogBoardHeurstics() {
 	llw, lrw := b.getLargestConnectedField()
 	stats = append(stats, HeuristicStat{"largest field", llw, lrw})
 
-	wvp, rvp := b.getVulnerablePiecesCount()
-	stats = append(stats, HeuristicStat{"vulnerable pieces", wvp, rvp})
+	// wvp, rvp := b.getVulnerablePiecesCount()
+	// stats = append(stats, HeuristicStat{"vulnerable pieces", wvp, rvp})
 
-	wsc, rsc := b.getSuicidalPiecesCount()
-	stats = append(stats, HeuristicStat{"suicidal pieces", wsc, rsc})
+	// wsc, rsc := b.getSuicidalPiecesCount()
+	// stats = append(stats, HeuristicStat{"suicidal pieces", wsc, rsc})
 
 	var whiteStats strings.Builder
 	var redStats strings.Builder
@@ -207,14 +233,17 @@ func minimax(depth int, board Board, player bool, alpha int, beta int, m *Move) 
 	}
 }
 
-func unrollMove(b *Board, move Move, player bool, maxDepth int) {
+func unrollMove(b *Board, move Move, player bool, maxDepth int) bool {
+	king := false
 	if move.Previous != nil {
 		unrollMove(b, *move.Previous, player, maxDepth)
 	}
 	k := b.applyMove(move, player)
 	if move.Depth == maxDepth && k {
 		b.promoteToKing(move.To)
+		king = true
 	}
+	return king
 }
 
 func possibleMoves(player bool, board Board) map[Move]Board {

@@ -26,7 +26,7 @@ func (g *Game) Start() {
 	g.running = true
 	g.started = time.Now()
 	g.boardQueue = make([]Board, 0)
-	g.board.LogBoardHeurstics()
+	//g.board.LogBoardHeurstics()
 	log.Printf("Starting evulation: %d", g.CurrentEvaulation())
 }
 
